@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply scroll-smooth;
+  }
+
+  ::selection {
+    @apply bg-primary/30 text-primary-content;
+  }
+}
+
+@layer components {
+  /* Gradient text effect */
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent;
+  }
+
+  /* Glass card with subtle border */
+  .glass-card {
+    @apply bg-white/[0.03] backdrop-blur-xl border border-white/[0.06];
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.02) inset,
+      0 4px 40px rgba(0, 0, 0, 0.3);
+  }
+
+  .glass-card:hover {
+    @apply border-white/[0.1];
+  }
+
+  /* Animated background orbs */
+  .orb {
+    @apply absolute rounded-full opacity-20;
+    filter: blur(100px);
+  }
+
+  .orb-1 {
+    @apply w-[500px] h-[500px] -top-40 -left-40 animate-float-slow;
+    background: radial-gradient(circle, theme('colors.primary'), transparent 70%);
+  }
+
+  .orb-2 {
+    @apply w-[400px] h-[400px] -bottom-32 -right-32 animate-float-slower;
+    background: radial-gradient(circle, theme('colors.accent'), transparent 70%);
+  }
+
+  .orb-3 {
+    @apply w-[350px] h-[350px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-float-slowest;
+    background: radial-gradient(circle, theme('colors.secondary'), transparent 70%);
+  }
+
+  /* Noise overlay for texture */
+  .noise {
+    @apply fixed inset-0 pointer-events-none opacity-[0.015];
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 256px;
+  }
+}

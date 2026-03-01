@@ -1,0 +1,17 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/converter",
+    "crates/app",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true

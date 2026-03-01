@@ -1,0 +1,9 @@
+/target
+/dist
+/node_modules
+*.wasm
+crates/app/tailwind.css
+crates/converter/pkg/
+.env
+.env.*
+!.env.example

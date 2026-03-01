@@ -1,0 +1,11 @@
+[build]
+target = "crates/app/index.html"
+dist = "dist"
+
+[watch]
+watch = ["crates"]
+
+[[hooks]]
+stage = "pre_build"
+command = "sh"
+command_arguments = ["-c", "npx tailwindcss -i ./input.css -o ./crates/app/tailwind.css --minify"]
