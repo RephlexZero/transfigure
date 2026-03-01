@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo ">>> cargo fmt --check"
+cargo fmt --check
+
+echo ">>> cargo clippy"
+cargo clippy --all-targets -- -D warnings
+
+echo ">>> cargo audit"
+if command -v cargo-audit &>/dev/null || cargo audit --version &>/dev/null 2>&1; then
+  cargo audit
+else
+  echo "cargo-audit not installed — skipping (run: cargo install cargo-audit --locked)"
+fi
