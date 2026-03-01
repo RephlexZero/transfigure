@@ -16,3 +16,6 @@ zip = { version = "2", default-features = false, features = ["deflate"] }
 tar = "0.4"
 flate2 = "1"
 lzma-rs = { version = "0.3", features = ["raw_decoder"] }
+sevenz-rust2 = { version = "0.20", default-features = false, features = ["compress"] }
+symphonia = { version = "0.5", default-features = false, features = ["mp3", "flac", "vorbis", "ogg", "wav", "pcm"] }
+hound = "3"

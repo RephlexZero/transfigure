@@ -28,6 +28,10 @@ This is a structural privacy guarantee, not a policy one. There is no server rec
 |            | BMP                 | PNG, JPG, WebP, GIF, TIFF               |
 |            | TIFF / TIF          | PNG, JPG, WebP, GIF, BMP                |
 |            | SVG                 | PNG                                     |
+| Audio      | MP3                 | WAV                                     |
+|            | FLAC                | WAV                                     |
+|            | OGG (Vorbis)        | WAV                                     |
+|            | WAV                 | WAV (normalises to 16-bit PCM)          |
 | Documents  | Markdown (MD)       | HTML, TXT                               |
 |            | HTML                | Markdown                                |
 | Data       | CSV                 | JSON, TSV                               |
@@ -50,6 +54,7 @@ Batch conversion is supported — drop multiple files at once and convert them a
 | Styling    | [Tailwind CSS v3](https://tailwindcss.com/) + [DaisyUI v4](https://daisyui.com/) |
 | Build      | [Trunk](https://trunkrs.dev/)                                |
 | Conversion | Pure Rust compiled to WebAssembly via `wasm-bindgen`         |
+| Audio      | [`symphonia`](https://github.com/pdeljanov/Symphonia) (decode) + [`hound`](https://github.com/ruuda/hound) (WAV encode) |
 | Hosting    | [Cloudflare Pages](https://pages.cloudflare.com/)            |
 | CI/CD      | GitHub Actions                                               |
 
