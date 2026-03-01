@@ -2,7 +2,7 @@
 name = "converter"
 version.workspace = true
 edition.workspace = true
-license.workspace = true
+license-file.workspace = true
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
@@ -12,3 +12,7 @@ comrak = { version = "0.36", default-features = false }
 csv = "1"
 base64 = "0.22"
 resvg = { version = "0.44", default-features = false }
+zip = { version = "2", default-features = false, features = ["deflate"] }
+tar = "0.4"
+flate2 = "1"
+lzma-rs = { version = "0.3", features = ["raw_decoder"] }

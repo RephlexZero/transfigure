@@ -34,8 +34,7 @@ pub fn convert_image(
 }
 
 pub fn svg_to_png(input: &[u8]) -> Result<Vec<u8>, String> {
-    let svg_str =
-        std::str::from_utf8(input).map_err(|e| format!("Invalid UTF-8 in SVG: {e}"))?;
+    let svg_str = std::str::from_utf8(input).map_err(|e| format!("Invalid UTF-8 in SVG: {e}"))?;
 
     let tree = resvg::usvg::Tree::from_str(svg_str, &resvg::usvg::Options::default())
         .map_err(|e| format!("Failed to parse SVG: {e}"))?;
@@ -57,7 +56,9 @@ pub fn svg_to_png(input: &[u8]) -> Result<Vec<u8>, String> {
         &mut pixmap.as_mut(),
     );
 
-    pixmap.encode_png().map_err(|e| format!("Failed to encode PNG: {e}"))
+    pixmap
+        .encode_png()
+        .map_err(|e| format!("Failed to encode PNG: {e}"))
 }
 
 fn parse_format(fmt: &str) -> Result<ImageFormat, String> {

@@ -38,17 +38,29 @@
 
   .orb-1 {
     @apply w-[500px] h-[500px] -top-40 -left-40 animate-float-slow;
-    background: radial-gradient(circle, theme('colors.primary'), transparent 70%);
+    background: radial-gradient(
+      circle,
+      theme("colors.primary"),
+      transparent 70%
+    );
   }
 
   .orb-2 {
     @apply w-[400px] h-[400px] -bottom-32 -right-32 animate-float-slower;
-    background: radial-gradient(circle, theme('colors.accent'), transparent 70%);
+    background: radial-gradient(
+      circle,
+      theme("colors.accent"),
+      transparent 70%
+    );
   }
 
   .orb-3 {
     @apply w-[350px] h-[350px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-float-slowest;
-    background: radial-gradient(circle, theme('colors.secondary'), transparent 70%);
+    background: radial-gradient(
+      circle,
+      theme("colors.secondary"),
+      transparent 70%
+    );
   }
 
   /* Noise overlay for texture */

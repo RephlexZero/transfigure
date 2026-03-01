@@ -1,26 +1,28 @@
 use leptos::prelude::*;
-use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
+use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::js_sys;
 
 // ── State types ────────────────────────────────────────────
 
+#[derive(Clone, PartialEq)]
+enum FileStatus {
+    Pending,
+    Converting,
+    Done(Vec<u8>),
+    Error(String),
+}
+
 #[derive(Clone)]
-struct FileData {
+struct BatchFile {
+    id: usize,
     name: String,
     bytes: Vec<u8>,
     extension: String,
     size: usize,
-}
-
-#[derive(Clone, PartialEq)]
-enum AppPhase {
-    Idle,
-    FileSelected,
-    Converting,
-    Done { output: Vec<u8>, target_ext: String, original_name: String },
-    Error(String),
+    target: Option<String>,
+    status: FileStatus,
 }
 
 // ── Entry point ────────────────────────────────────────────
@@ -34,13 +36,11 @@ fn main() {
 
 #[component]
 fn App() -> impl IntoView {
-    let file = RwSignal::new(Option::<FileData>::None);
-    let target = RwSignal::new(Option::<String>::None);
-    let phase = RwSignal::new(AppPhase::Idle);
+    let files = RwSignal::new(Vec::<BatchFile>::new());
+    let next_id = RwSignal::new(0usize);
 
     view! {
         <div class="min-h-screen bg-base-300 relative overflow-hidden">
-            // Animated background
             <div class="pointer-events-none fixed inset-0 z-0">
                 <div class="orb orb-1"></div>
                 <div class="orb orb-2"></div>
@@ -53,7 +53,7 @@ fn App() -> impl IntoView {
 
                 <main class="container mx-auto px-4 sm:px-6 lg:px-8 pb-20">
                     <Hero/>
-                    <ConverterSection file=file target=target phase=phase/>
+                    <ConverterSection files=files next_id=next_id/>
                     <HowItWorks/>
                     <Formats/>
                     <PrivacyBanner/>
@@ -80,7 +80,7 @@ fn Header() -> impl IntoView {
                     <a href="#how" class="text-sm text-base-content/60 hover:text-base-content transition-colors">"How it works"</a>
                     <a href="#formats" class="text-sm text-base-content/60 hover:text-base-content transition-colors">"Formats"</a>
                     <a
-                        href="https://github.com/RephlexZero/transfigureing"
+                        href="https://github.com/RephlexZero/transfigure"
                         target="_blank"
                         rel="noopener noreferrer"
                         class="btn btn-ghost btn-sm btn-circle"
@@ -127,136 +127,428 @@ fn Hero() -> impl IntoView {
 // ── Converter Section ───────────────────────────────
 
 #[component]
-fn ConverterSection(
-    file: RwSignal<Option<FileData>>,
-    target: RwSignal<Option<String>>,
-    phase: RwSignal<AppPhase>,
-) -> impl IntoView {
+fn ConverterSection(files: RwSignal<Vec<BatchFile>>, next_id: RwSignal<usize>) -> impl IntoView {
     let dragging = RwSignal::new(false);
+    let is_converting = RwSignal::new(false);
 
-    let on_file_selected = move |name: String, bytes: Vec<u8>| {
-        let size = bytes.len();
-        let ext = converter::detect_format(&name).unwrap_or_default();
-        file.set(Some(FileData { name, bytes, extension: ext, size }));
-        target.set(None);
-        phase.set(AppPhase::FileSelected);
-    };
+    let has_files = Memo::new(move |_| !files.get().is_empty());
+    let all_done = Memo::new(move |_| {
+        let f = files.get();
+        !f.is_empty()
+            && f.iter()
+                .all(|f| matches!(f.status, FileStatus::Done(_) | FileStatus::Error(_)))
+    });
+    let can_convert = Memo::new(move |_| {
+        let f = files.get();
+        !f.is_empty()
+            && f.iter()
+                .any(|f| f.target.is_some() && f.status == FileStatus::Pending)
+            && !is_converting.get()
+    });
+    let done_count = Memo::new(move |_| {
+        files
+            .get()
+            .iter()
+            .filter(|f| matches!(f.status, FileStatus::Done(_)))
+            .count()
+    });
 
-    let on_convert = move |_| {
-        let Some(f) = file.get() else { return };
-        let Some(t) = target.get() else { return };
-
-        phase.set(AppPhase::Converting);
-        let original_name = f.name.clone();
-        let ext = f.extension.clone();
-        let bytes = f.bytes.clone();
-        let target_ext = t.clone();
-
-        wasm_bindgen_futures::spawn_local(async move {
-            // Yield to let UI paint the Converting state
-            let _ = JsFuture::from(js_sys::Promise::resolve(&JsValue::NULL)).await;
-
-            let config = format!(r#"{{"from":"{}","to":"{}"}}"#, ext, target_ext);
-            match converter::convert(&bytes, &config) {
-                Ok(output) => {
-                    phase.set(AppPhase::Done { output, target_ext, original_name });
-                }
-                Err(e) => {
-                    phase.set(AppPhase::Error(e));
-                }
+    let add_files = move |new_files: Vec<(String, Vec<u8>)>| {
+        files.update(|list| {
+            for (name, bytes) in new_files {
+                let size = bytes.len();
+                let ext = converter::detect_format(&name).unwrap_or_default();
+                let formats = converter::get_output_formats(&ext);
+                let default_target = formats.first().map(|s| s.to_string());
+                let id = next_id.get();
+                next_id.set(id + 1);
+                list.push(BatchFile {
+                    id,
+                    name,
+                    bytes,
+                    extension: ext,
+                    size,
+                    target: default_target,
+                    status: FileStatus::Pending,
+                });
             }
         });
     };
 
-    let on_reset = move |_| {
-        file.set(None);
-        target.set(None);
-        phase.set(AppPhase::Idle);
+    let remove_file = move |file_id: usize| {
+        files.update(|list| list.retain(|f| f.id != file_id));
     };
 
-    let on_download = move |_| {
-        if let AppPhase::Done { ref output, ref target_ext, ref original_name } = phase.get() {
-            download_blob(&output, original_name, target_ext);
+    let set_target = move |file_id: usize, target: String| {
+        files.update(|list| {
+            if let Some(f) = list.iter_mut().find(|f| f.id == file_id) {
+                f.target = Some(target);
+            }
+        });
+    };
+
+    let convert_all = move |_| {
+        is_converting.set(true);
+        let file_list = files.get();
+
+        for file in file_list.iter() {
+            if file.target.is_none() || file.status != FileStatus::Pending {
+                continue;
+            }
+
+            let file_id = file.id;
+            let ext = file.extension.clone();
+            let bytes = file.bytes.clone();
+            let target_ext = file.target.clone().unwrap();
+
+            files.update(|list| {
+                if let Some(f) = list.iter_mut().find(|f| f.id == file_id) {
+                    f.status = FileStatus::Converting;
+                }
+            });
+
+            let files_signal = files;
+            let is_converting_signal = is_converting;
+            wasm_bindgen_futures::spawn_local(async move {
+                let _ = JsFuture::from(js_sys::Promise::resolve(&JsValue::NULL)).await;
+
+                let config = format!(r#"{{"from":"{}","to":"{}"}}"#, ext, target_ext);
+                let result = converter::convert(&bytes, &config);
+
+                files_signal.update(|list| {
+                    if let Some(f) = list.iter_mut().find(|f| f.id == file_id) {
+                        match result {
+                            Ok(output) => f.status = FileStatus::Done(output),
+                            Err(e) => f.status = FileStatus::Error(e),
+                        }
+                    }
+                });
+
+                let all_finished = files_signal
+                    .get()
+                    .iter()
+                    .all(|f| !matches!(f.status, FileStatus::Converting));
+                if all_finished {
+                    is_converting_signal.set(false);
+                }
+            });
         }
     };
 
+    let on_reset = move |_| {
+        files.set(Vec::new());
+        is_converting.set(false);
+    };
+
+    let save_file = move |file_id: usize| {
+        let list = files.get();
+        if let Some(f) = list.iter().find(|f| f.id == file_id)
+            && let FileStatus::Done(ref output) = f.status
+        {
+            let target_ext = f.target.as_deref().unwrap_or("bin");
+            download_blob(output, &f.name, target_ext);
+        }
+    };
+
+    let save_all_as = move |format: String| {
+        let list = files.get();
+        let entries: Vec<converter::archive::ArchiveEntry> = list
+            .iter()
+            .filter_map(|f| {
+                if let FileStatus::Done(ref output) = f.status {
+                    let target_ext = f.target.as_deref().unwrap_or("bin");
+                    let output_name = make_output_name(&f.name, target_ext);
+                    Some(converter::archive::ArchiveEntry {
+                        name: output_name,
+                        data: output.clone(),
+                    })
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        if entries.is_empty() {
+            return;
+        }
+
+        let (archive_data, archive_ext, mime) = match format.as_str() {
+            "zip" => match converter::archive::create_zip(&entries) {
+                Ok(data) => (data, "zip", "application/zip"),
+                Err(e) => {
+                    web_sys::console::error_1(&format!("Archive error: {e}").into());
+                    return;
+                }
+            },
+            "tar.gz" => match converter::archive::create_tar_gz(&entries) {
+                Ok(data) => (data, "tar.gz", "application/gzip"),
+                Err(e) => {
+                    web_sys::console::error_1(&format!("Archive error: {e}").into());
+                    return;
+                }
+            },
+            "tar.xz" => match converter::archive::create_tar_xz(&entries) {
+                Ok(data) => (data, "tar.xz", "application/x-xz"),
+                Err(e) => {
+                    web_sys::console::error_1(&format!("Archive error: {e}").into());
+                    return;
+                }
+            },
+            _ => return,
+        };
+
+        download_blob_raw(
+            &archive_data,
+            &format!("transfigure-output.{archive_ext}"),
+            mime,
+        );
+    };
+
     view! {
-        <section id="converter" class="max-w-2xl mx-auto mb-24">
+        <section id="converter" class="max-w-3xl mx-auto mb-24">
             <div class="glass-card rounded-2xl p-6 sm:p-8">
+                <DropZone dragging=dragging add_files=add_files has_files=has_files/>
+
                 {move || {
-                    match phase.get() {
-                        AppPhase::Idle => view! {
-                            <DropZone dragging=dragging on_file_selected=on_file_selected.clone() />
-                        }.into_any(),
+                    let file_list = files.get();
+                    if file_list.is_empty() {
+                        view! { <div class="hidden"></div> }.into_any()
+                    } else {
+                        let is_conv = is_converting.get();
+                        view! {
+                            <div class="mt-6 space-y-3">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm text-base-content/50 font-medium">
+                                        {file_list.len()} " file" {if file_list.len() != 1 { "s" } else { "" }}
+                                    </span>
+                                    <button
+                                        class="btn btn-ghost btn-xs text-base-content/40 hover:text-error"
+                                        on:click=on_reset
+                                    >"Clear all"</button>
+                                </div>
 
-                        AppPhase::FileSelected => view! {
-                            <div>
-                                <FileInfo file=file on_reset=on_reset />
-                                <FormatPicker file=file target=target />
-                                <button
-                                    class="btn btn-primary btn-lg w-full mt-6 gap-2 group"
-                                    class:btn-disabled=move || target.get().is_none()
-                                    on:click=on_convert
+                                <For
+                                    each=move || files.get()
+                                    key=|f| f.id
+                                    let:file
                                 >
-                                    <span>"Convert"</span>
-                                    <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                                        <path d="M5 12h14M12 5l7 7-7 7"/>
-                                    </svg>
-                                </button>
-                            </div>
-                        }.into_any(),
+                                    <FileRow
+                                        file=file.clone()
+                                        on_remove=remove_file
+                                        on_set_target=set_target
+                                        on_save=save_file
+                                    />
+                                </For>
 
-                        AppPhase::Converting => view! {
-                            <div class="text-center py-12">
-                                <span class="loading loading-ring loading-lg text-primary"></span>
-                                <p class="mt-4 text-base-content/60 text-sm">"Processing your file with WASM..."</p>
-                                <progress class="progress progress-primary w-full mt-4"></progress>
-                            </div>
-                        }.into_any(),
-
-                        AppPhase::Done { .. } => view! {
-                            <div class="text-center py-8">
-                                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-success/10 mb-4">
-                                    <svg class="w-8 h-8 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                                        <polyline points="22 4 12 14.01 9 11.01"/>
-                                    </svg>
+                                <div class="flex flex-col sm:flex-row gap-3 pt-4 border-t border-white/5">
+                                    {move || {
+                                        if all_done.get() {
+                                            view! {
+                                                <div class="flex flex-col sm:flex-row gap-3 w-full">
+                                                    <SaveAllDropdown done_count=done_count save_all_as=save_all_as/>
+                                                    <button class="btn btn-ghost flex-1" on:click=on_reset>
+                                                        "Start over"
+                                                    </button>
+                                                </div>
+                                            }.into_any()
+                                        } else {
+                                            view! {
+                                                <button
+                                                    class="btn btn-primary btn-lg w-full gap-2 group"
+                                                    class:btn-disabled=move || !can_convert.get()
+                                                    on:click=convert_all
+                                                >
+                                                    {move || if is_conv {
+                                                        "Converting...".to_string()
+                                                    } else {
+                                                        let count = files.get().iter()
+                                                            .filter(|f| f.target.is_some() && f.status == FileStatus::Pending)
+                                                            .count();
+                                                        format!("Convert {count} file{}", if count != 1 { "s" } else { "" })
+                                                    }}
+                                                    <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                                        <path d="M5 12h14M12 5l7 7-7 7"/>
+                                                    </svg>
+                                                </button>
+                                            }.into_any()
+                                        }
+                                    }}
                                 </div>
-                                <h3 class="text-xl font-bold mb-2">"Conversion complete!"</h3>
-                                <p class="text-base-content/60 text-sm mb-6">"Your file was converted locally. Zero bytes were uploaded."</p>
-                                <div class="flex flex-col sm:flex-row gap-3 justify-center">
-                                    <button class="btn btn-success btn-lg gap-2" on:click=on_download>
-                                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                                            <polyline points="7 10 12 15 17 10"/>
-                                            <line x1="12" y1="15" x2="12" y2="3"/>
-                                        </svg>
-                                        "Download"
-                                    </button>
-                                    <button class="btn btn-ghost btn-lg" on:click=on_reset>
-                                        "Convert another file"
-                                    </button>
-                                </div>
                             </div>
-                        }.into_any(),
-
-                        AppPhase::Error(msg) => view! {
-                            <div class="text-center py-8">
-                                <div class="alert alert-error mb-6">
-                                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                                        <circle cx="12" cy="12" r="10"/>
-                                        <line x1="15" y1="9" x2="9" y2="15"/>
-                                        <line x1="9" y1="9" x2="15" y2="15"/>
-                                    </svg>
-                                    <span>{msg}</span>
-                                </div>
-                                <button class="btn btn-ghost" on:click=on_reset>"Try again"</button>
-                            </div>
-                        }.into_any(),
+                        }.into_any()
                     }
                 }}
             </div>
         </section>
+    }
+}
+
+// ── File Row ────────────────────────────────────────
+
+#[component]
+fn FileRow(
+    file: BatchFile,
+    on_remove: impl Fn(usize) + 'static + Copy,
+    on_set_target: impl Fn(usize, String) + 'static + Copy,
+    on_save: impl Fn(usize) + 'static + Copy,
+) -> impl IntoView {
+    let file_id = file.id;
+    let formats: Vec<String> = converter::get_output_formats(&file.extension)
+        .into_iter()
+        .map(|s| s.to_string())
+        .collect();
+    let current_target = file.target.clone().unwrap_or_default();
+    let is_done = matches!(file.status, FileStatus::Done(_));
+    let is_converting = matches!(file.status, FileStatus::Converting);
+    let is_error = matches!(file.status, FileStatus::Error(_));
+    let error_msg = if let FileStatus::Error(ref e) = file.status {
+        e.clone()
+    } else {
+        String::new()
+    };
+
+    view! {
+        <div class=move || {
+            let base = "flex flex-col gap-2 p-3 rounded-xl border transition-all duration-200";
+            if is_done {
+                format!("{base} bg-success/5 border-success/20")
+            } else if is_error {
+                format!("{base} bg-error/5 border-error/20")
+            } else if is_converting {
+                format!("{base} bg-primary/5 border-primary/20")
+            } else {
+                format!("{base} bg-base-100/50 border-white/5")
+            }
+        }>
+            <div class="flex items-center gap-3">
+                <span class="text-xl flex-shrink-0">{format_icon(&file.extension)}</span>
+
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium truncate">{file.name.clone()}</p>
+                    <p class="text-xs text-base-content/40">
+                        {format_size(file.size)}
+                        " · "
+                        <span class="uppercase font-medium text-base-content/50">{file.extension.clone()}</span>
+                    </p>
+                </div>
+
+                <svg class="w-4 h-4 text-base-content/20 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+
+                <select
+                    class="select select-sm select-bordered bg-base-100/80 min-w-[100px] text-sm font-medium"
+                    prop:disabled=is_done || is_converting
+                    on:change=move |ev| {
+                        let val = event_target_value(&ev);
+                        on_set_target(file_id, val);
+                    }
+                >
+                    {formats.iter().map(|fmt| {
+                        let selected = *fmt == current_target;
+                        let fmt_val = fmt.clone();
+                        view! {
+                            <option value={fmt_val} selected=selected>
+                                {fmt.to_uppercase()}
+                            </option>
+                        }
+                    }).collect::<Vec<_>>()}
+                </select>
+
+                <div class="flex items-center gap-1 flex-shrink-0">
+                    {if is_done {
+                        view! {
+                            <button
+                                class="btn btn-success btn-sm gap-1"
+                                on:click=move |_| on_save(file_id)
+                            >
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                                    <polyline points="17 21 17 13 7 13 7 21"/>
+                                    <polyline points="7 3 7 8 15 8"/>
+                                </svg>
+                                "Save"
+                            </button>
+                        }.into_any()
+                    } else if is_converting {
+                        view! {
+                            <span class="loading loading-spinner loading-sm text-primary"></span>
+                        }.into_any()
+                    } else {
+                        view! {
+                            <button
+                                class="btn btn-ghost btn-sm btn-circle text-base-content/30 hover:text-error"
+                                on:click=move |_| on_remove(file_id)
+                            >
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"/>
+                                    <line x1="6" y1="6" x2="18" y2="18"/>
+                                </svg>
+                            </button>
+                        }.into_any()
+                    }}
+                </div>
+            </div>
+
+            {if is_error {
+                view! {
+                    <p class="text-xs text-error pl-8">{error_msg.clone()}</p>
+                }.into_any()
+            } else {
+                view! { <span class="hidden"></span> }.into_any()
+            }}
+        </div>
+    }
+}
+
+// ── Save All Dropdown ───────────────────────────────
+
+#[component]
+fn SaveAllDropdown(
+    done_count: Memo<usize>,
+    save_all_as: impl Fn(String) + 'static + Clone,
+) -> impl IntoView {
+    let save_zip = {
+        let cb = save_all_as.clone();
+        move |_: web_sys::MouseEvent| cb("zip".to_string())
+    };
+    let save_tar_gz = {
+        let cb = save_all_as.clone();
+        move |_: web_sys::MouseEvent| cb("tar.gz".to_string())
+    };
+    let save_tar_xz = {
+        let cb = save_all_as.clone();
+        move |_: web_sys::MouseEvent| cb("tar.xz".to_string())
+    };
+
+    view! {
+        <div class="dropdown dropdown-top flex-1">
+            <div tabindex="0" role="button" class="btn btn-success btn-lg w-full gap-2">
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                    <polyline points="17 21 17 13 7 13 7 21"/>
+                    <polyline points="7 3 7 8 15 8"/>
+                </svg>
+                "Save all " {move || done_count.get()} " files"
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <polyline points="18 15 12 9 6 15"/>
+                </svg>
+            </div>
+            <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow-2xl bg-base-200 rounded-box w-full mb-2 border border-white/10">
+                <li><a on:click=save_zip>
+                    <span class="font-medium">"ZIP"</span>
+                    <span class="text-xs text-base-content/40">"Most compatible"</span>
+                </a></li>
+                <li><a on:click=save_tar_gz>
+                    <span class="font-medium">"TAR.GZ"</span>
+                    <span class="text-xs text-base-content/40">"Smaller, Unix-native"</span>
+                </a></li>
+                <li><a on:click=save_tar_xz>
+                    <span class="font-medium">"TAR.XZ"</span>
+                    <span class="text-xs text-base-content/40">"Best compression"</span>
+                </a></li>
+            </ul>
+        </div>
     }
 }
 
@@ -265,33 +557,53 @@ fn ConverterSection(
 #[component]
 fn DropZone(
     dragging: RwSignal<bool>,
-    on_file_selected: impl Fn(String, Vec<u8>) + 'static + Clone,
+    add_files: impl Fn(Vec<(String, Vec<u8>)>) + 'static + Clone,
+    has_files: Memo<bool>,
 ) -> impl IntoView {
     let input_ref = NodeRef::<leptos::html::Input>::new();
-    let cb = on_file_selected.clone();
 
-    let handle_files = move |file: web_sys::File| {
-        let cb = cb.clone();
-        wasm_bindgen_futures::spawn_local(async move {
-            let name = file.name();
-            let Ok(buf) = JsFuture::from(file.array_buffer()).await else { return };
-            let array = js_sys::Uint8Array::new(&buf);
-            let bytes = array.to_vec();
-            cb(name, bytes);
-        });
+    let process_file_list = {
+        let add_files = add_files.clone();
+        move |file_list: web_sys::FileList| {
+            let add = add_files.clone();
+            let count = file_list.length();
+            let collected = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+            let remaining = std::rc::Rc::new(std::cell::Cell::new(count));
+
+            for i in 0..count {
+                if let Some(file) = file_list.get(i) {
+                    let collected = collected.clone();
+                    let remaining = remaining.clone();
+                    let add = add.clone();
+                    wasm_bindgen_futures::spawn_local(async move {
+                        let name = file.name();
+                        if let Ok(buf) = JsFuture::from(file.array_buffer()).await {
+                            let array = js_sys::Uint8Array::new(&buf);
+                            let bytes = array.to_vec();
+                            collected.borrow_mut().push((name, bytes));
+                        }
+                        let left = remaining.get() - 1;
+                        remaining.set(left);
+                        if left == 0 {
+                            let items = collected.borrow_mut().drain(..).collect();
+                            add(items);
+                        }
+                    });
+                }
+            }
+        }
     };
 
-    let handle_files_clone = handle_files.clone();
+    let process_drop = process_file_list.clone();
+    let process_input = process_file_list;
 
     let on_drop = move |ev: web_sys::DragEvent| {
         ev.prevent_default();
         dragging.set(false);
-        if let Some(dt) = ev.data_transfer() {
-            if let Some(files) = dt.files() {
-                if let Some(file) = files.get(0) {
-                    handle_files_clone(file);
-                }
-            }
+        if let Some(dt) = ev.data_transfer()
+            && let Some(files) = dt.files()
+        {
+            process_drop(files);
         }
     };
 
@@ -299,10 +611,9 @@ fn DropZone(
         if let Some(input) = input_ref.get() {
             let el: &web_sys::HtmlInputElement = &input;
             if let Some(files) = el.files() {
-                if let Some(file) = files.get(0) {
-                    handle_files(file);
-                }
+                process_input(files);
             }
+            el.set_value("");
         }
     };
 
@@ -316,8 +627,15 @@ fn DropZone(
     view! {
         <div
             class=move || {
+                let compact = has_files.get();
                 if dragging.get() {
-                    "relative rounded-xl border-2 border-dashed p-12 sm:p-16 text-center transition-all duration-300 cursor-pointer border-primary bg-primary/10 scale-105"
+                    if compact {
+                        "relative rounded-xl border-2 border-dashed p-4 text-center transition-all duration-300 cursor-pointer border-primary bg-primary/10 scale-[1.02]"
+                    } else {
+                        "relative rounded-xl border-2 border-dashed p-12 sm:p-16 text-center transition-all duration-300 cursor-pointer border-primary bg-primary/10 scale-105"
+                    }
+                } else if compact {
+                    "relative rounded-xl border-2 border-dashed p-4 text-center transition-all duration-300 cursor-pointer border-base-content/10 hover:border-primary/40 hover:bg-primary/5"
                 } else {
                     "relative rounded-xl border-2 border-dashed p-12 sm:p-16 text-center transition-all duration-300 cursor-pointer border-base-content/10 hover:border-primary/40 hover:bg-primary/5"
                 }
@@ -331,106 +649,45 @@ fn DropZone(
             <input
                 node_ref=input_ref
                 type="file"
+                multiple=true
                 class="hidden"
                 on:change=on_change
             />
 
-            <div class="flex flex-col items-center gap-4">
-                <div class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                    <svg class="w-8 h-8 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                        <polyline points="17 8 12 3 7 8"/>
-                        <line x1="12" y1="3" x2="12" y2="15"/>
-                    </svg>
-                </div>
-                <div>
-                    <p class="text-lg font-medium">"Drop your file here"</p>
-                    <p class="text-sm text-base-content/50 mt-1">
-                        "or "
-                        <span class="text-primary underline underline-offset-2">"browse files"</span>
-                    </p>
-                </div>
-                <p class="text-xs text-base-content/30">"Images · Documents · Data · Config files"</p>
-            </div>
-        </div>
-    }
-}
-
-// ── File Info ───────────────────────────────────────
-
-#[component]
-fn FileInfo(
-    file: RwSignal<Option<FileData>>,
-    on_reset: impl Fn(web_sys::MouseEvent) + 'static,
-) -> impl IntoView {
-    view! {
-        <div class="flex items-center gap-4 p-4 rounded-xl bg-base-100/50 border border-white/5">
-            <div class="text-3xl">{move || format_icon(&file.get().map(|f| f.extension.clone()).unwrap_or_default())}</div>
-            <div class="flex-1 min-w-0">
-                <p class="font-medium truncate">{move || file.get().map(|f| f.name.clone()).unwrap_or_default()}</p>
-                <p class="text-sm text-base-content/50">
-                    {move || file.get().map(|f| format_size(f.size)).unwrap_or_default()}
-                    " · "
-                    <span class="badge badge-sm badge-primary badge-outline">
-                        {move || file.get().map(|f| f.extension.to_uppercase()).unwrap_or_default()}
-                    </span>
-                </p>
-            </div>
-            <button class="btn btn-ghost btn-sm btn-circle" on:click=on_reset>
-                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                    <line x1="18" y1="6" x2="6" y2="18"/>
-                    <line x1="6" y1="6" x2="18" y2="18"/>
-                </svg>
-            </button>
-        </div>
-    }
-}
-
-// ── Format Picker ───────────────────────────────────
-
-#[component]
-fn FormatPicker(
-    file: RwSignal<Option<FileData>>,
-    target: RwSignal<Option<String>>,
-) -> impl IntoView {
-    let formats = Memo::new(move |_| {
-        file.get()
-            .map(|f| converter::get_output_formats(&f.extension)
-                .into_iter()
-                .map(|s| s.to_string())
-                .collect::<Vec<_>>())
-            .unwrap_or_default()
-    });
-
-    view! {
-        <div class="mt-5">
-            <label class="text-sm font-medium text-base-content/60 mb-3 block">"Convert to"</label>
-            <div class="flex flex-wrap gap-2">
-                <For
-                    each=move || formats.get()
-                    key=|fmt| fmt.clone()
-                    let:fmt
-                >
-                    {
-                        let fmt_click = fmt.clone();
-                        let fmt_display = fmt.clone();
-                        let fmt_check = fmt.clone();
-                        view! {
-                            <button
-                                class="btn btn-sm rounded-full gap-1 transition-all duration-200"
-                                class:btn-primary=move || target.get().as_deref() == Some(&fmt_check)
-                                class:btn-outline=move || target.get().as_deref() != Some(&fmt_click)
-                                on:click={
-                                    let f = fmt.clone();
-                                    move |_| target.set(Some(f.clone()))
-                                }
-                            >
-                                {fmt_display.to_uppercase()}
-                            </button>
-                        }
-                    }
-                </For>
-            </div>
+            {move || {
+                if has_files.get() {
+                    view! {
+                        <div class="flex items-center justify-center gap-3">
+                            <svg class="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                <line x1="12" y1="5" x2="12" y2="19"/>
+                                <line x1="5" y1="12" x2="19" y2="12"/>
+                            </svg>
+                            <span class="text-sm text-base-content/50">"Drop more files or "<span class="text-primary underline underline-offset-2">"browse"</span></span>
+                        </div>
+                    }.into_any()
+                } else {
+                    view! {
+                        <div class="flex flex-col items-center gap-4">
+                            <div class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                                <svg class="w-8 h-8 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="17 8 12 3 7 8"/>
+                                    <line x1="12" y1="3" x2="12" y2="15"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="text-lg font-medium">"Drop your files here"</p>
+                                <p class="text-sm text-base-content/50 mt-1">
+                                    "or "
+                                    <span class="text-primary underline underline-offset-2">"browse files"</span>
+                                    " · Multiple files supported"
+                                </p>
+                            </div>
+                            <p class="text-xs text-base-content/30">"Images · Documents · Data · Config files"</p>
+                        </div>
+                    }.into_any()
+                }
+            }}
         </div>
     }
 }
@@ -450,20 +707,20 @@ fn HowItWorks() -> impl IntoView {
                 <StepCard
                     number="01"
                     icon="🔒"
-                    title="Drop your file"
-                    description="Your file is read into browser memory via the File API. It never touches any server."
+                    title="Drop your files"
+                    description="Your files are read into browser memory via the File API. They never touch any server. Batch processing? Just drop them all at once."
                 />
                 <StepCard
                     number="02"
                     icon="⚡"
-                    title="WASM converts it"
-                    description="Our Rust-compiled WebAssembly engine processes your file at near-native speed, entirely in your browser."
+                    title="WASM converts them"
+                    description="Our Rust-compiled WebAssembly engine processes every file at near-native speed, entirely in your browser."
                 />
                 <StepCard
                     number="03"
-                    icon="📥"
-                    title="Download the result"
-                    description="The converted file is generated locally and downloaded. Verify it yourself — open DevTools and watch the Network tab."
+                    icon="💾"
+                    title="Save the results"
+                    description="Save files individually or bundle everything into a ZIP, TAR.GZ, or TAR.XZ archive. All generated locally."
                 />
             </div>
         </section>
@@ -513,11 +770,7 @@ fn Formats() -> impl IntoView {
 }
 
 #[component]
-fn FormatCard(
-    icon: &'static str,
-    title: &'static str,
-    formats: &'static str,
-) -> impl IntoView {
+fn FormatCard(icon: &'static str, title: &'static str, formats: &'static str) -> impl IntoView {
     view! {
         <div class="glass-card rounded-xl p-5 text-center hover:border-primary/20 transition-all duration-300 group">
             <span class="text-3xl mb-3 block group-hover:scale-110 transition-transform">{icon}</span>
@@ -566,7 +819,7 @@ fn Footer() -> impl IntoView {
                 </div>
                 <p>"Built with Rust & WebAssembly. Your files stay yours."</p>
                 <a
-                    href="https://github.com/RephlexZero/transfigureing"
+                    href="https://github.com/RephlexZero/transfigure"
                     target="_blank"
                     rel="noopener noreferrer"
                     class="hover:text-base-content transition-colors"
@@ -619,13 +872,26 @@ fn mime_type_for(ext: &str) -> &'static str {
     }
 }
 
+fn make_output_name(original_name: &str, target_ext: &str) -> String {
+    if let Some((stem, _)) = original_name.rsplit_once('.') {
+        format!("{stem}.{target_ext}")
+    } else {
+        format!("{original_name}.{target_ext}")
+    }
+}
+
 fn download_blob(data: &[u8], original_name: &str, target_ext: &str) {
+    let output_name = make_output_name(original_name, target_ext);
+    download_blob_raw(data, &output_name, mime_type_for(target_ext));
+}
+
+fn download_blob_raw(data: &[u8], filename: &str, mime: &str) {
     let array = js_sys::Uint8Array::from(data);
     let parts = js_sys::Array::new();
     parts.push(&array.buffer());
 
     let opts = web_sys::BlobPropertyBag::new();
-    opts.set_type(mime_type_for(target_ext));
+    opts.set_type(mime);
 
     let blob = web_sys::Blob::new_with_u8_array_sequence_and_options(&parts, &opts).unwrap();
     let url = web_sys::Url::create_object_url_with_blob(&blob).unwrap();
@@ -634,14 +900,7 @@ fn download_blob(data: &[u8], original_name: &str, target_ext: &str) {
     let document = window.document().unwrap();
     let a = document.create_element("a").unwrap();
     a.set_attribute("href", &url).unwrap();
-
-    // Build output filename: input.md -> input.html
-    let output_name = if let Some(stem) = original_name.rsplit_once('.') {
-        format!("{}.{}", stem.0, target_ext)
-    } else {
-        format!("{original_name}.{target_ext}")
-    };
-    a.set_attribute("download", &output_name).unwrap();
+    a.set_attribute("download", filename).unwrap();
 
     let el: &web_sys::HtmlElement = a.unchecked_ref();
     el.click();

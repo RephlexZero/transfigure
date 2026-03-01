@@ -1,7 +1,8 @@
 use serde::Deserialize;
 
-mod image_conv;
+pub mod archive;
 mod document;
+mod image_conv;
 mod spreadsheet;
 
 #[derive(Deserialize)]
@@ -47,7 +48,10 @@ pub fn convert(input: &[u8], config_json: &str) -> Result<Vec<u8>, String> {
         ("toml", "json") => document::toml_to_json(input),
         ("json", "toml") => document::json_to_toml(input),
 
-        _ => Err(format!("Unsupported conversion: {} → {}", config.from, config.to)),
+        _ => Err(format!(
+            "Unsupported conversion: {} → {}",
+            config.from, config.to
+        )),
     }
 }
 
@@ -86,14 +90,35 @@ pub fn detect_format(filename: &str) -> Option<String> {
 }
 
 fn is_image_format(fmt: &str) -> bool {
-    matches!(fmt, "png" | "jpg" | "jpeg" | "webp" | "gif" | "bmp" | "tiff" | "tif")
+    matches!(
+        fmt,
+        "png" | "jpg" | "jpeg" | "webp" | "gif" | "bmp" | "tiff" | "tif"
+    )
 }
 
 fn is_known_format(fmt: &str) -> bool {
     matches!(
         fmt,
-        "png" | "jpg" | "jpeg" | "webp" | "gif" | "bmp" | "tiff" | "tif"
-            | "svg" | "md" | "markdown" | "html" | "txt" | "text"
-            | "csv" | "tsv" | "json" | "yaml" | "yml" | "toml" | "base64"
+        "png"
+            | "jpg"
+            | "jpeg"
+            | "webp"
+            | "gif"
+            | "bmp"
+            | "tiff"
+            | "tif"
+            | "svg"
+            | "md"
+            | "markdown"
+            | "html"
+            | "txt"
+            | "text"
+            | "csv"
+            | "tsv"
+            | "json"
+            | "yaml"
+            | "yml"
+            | "toml"
+            | "base64"
     )
 }

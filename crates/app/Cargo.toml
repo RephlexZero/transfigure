@@ -2,7 +2,7 @@
 name = "transfigure-app"
 version.workspace = true
 edition.workspace = true
-license.workspace = true
+license-file.workspace = true
 
 [dependencies]
 leptos = { version = "0.7", features = ["csr"] }
@@ -24,5 +24,6 @@ features = [
     "Url",
     "HtmlInputElement",
     "HtmlAnchorElement",
+    "HtmlSelectElement",
     "console",
 ]

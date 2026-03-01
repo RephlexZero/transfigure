@@ -76,7 +76,8 @@ pub fn json_to_csv(input: &[u8]) -> Result<Vec<u8>, String> {
         }
     }
 
-    wtr.into_inner().map_err(|e| format!("CSV flush error: {e}"))
+    wtr.into_inner()
+        .map_err(|e| format!("CSV flush error: {e}"))
 }
 
 pub fn csv_to_tsv(input: &[u8]) -> Result<Vec<u8>, String> {
@@ -112,5 +113,6 @@ pub fn tsv_to_csv(input: &[u8]) -> Result<Vec<u8>, String> {
             .map_err(|e| format!("CSV write error: {e}"))?;
     }
 
-    wtr.into_inner().map_err(|e| format!("CSV flush error: {e}"))
+    wtr.into_inner()
+        .map_err(|e| format!("CSV flush error: {e}"))
 }

@@ -157,7 +157,11 @@ fn json_value_to_yaml(value: &serde_json::Value, indent: usize) -> String {
             out
         }
         serde_json::Value::Object(map) => {
-            let mut out = if indent > 0 { "\n".into() } else { String::new() };
+            let mut out = if indent > 0 {
+                "\n".into()
+            } else {
+                String::new()
+            };
             for (key, val) in map {
                 out.push_str(&format!("{prefix}{key}: "));
                 out.push_str(json_value_to_yaml(val, indent + 1).trim_start());
@@ -174,7 +178,7 @@ fn json_value_to_toml(value: &serde_json::Value, prefix: &str) -> String {
             match val {
                 serde_json::Value::Object(_) => {}
                 serde_json::Value::Array(arr) => {
-                    let items: Vec<String> = arr.iter().map(|v| toml_scalar(v)).collect();
+                    let items: Vec<String> = arr.iter().map(toml_scalar).collect();
                     out.push_str(&format!("{key} = [{}]\n", items.join(", ")));
                 }
                 _ => out.push_str(&format!("{key} = {}\n", toml_scalar(val))),
