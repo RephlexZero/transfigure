@@ -1,0 +1,142 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <!-- Primary gradient: purple → blue, used for title and flask stroke -->
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#60a5fa"/>
+    </linearGradient>
+    <!-- Ambient orbs matching the site's CSS orbs -->
+    <radialGradient id="o1" cx="15%" cy="25%" r="55%">
+      <stop offset="0%" stop-color="#7c3aed" stop-opacity="0.38"/>
+      <stop offset="100%" stop-color="#7c3aed" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="o2" cx="88%" cy="78%" r="48%">
+      <stop offset="0%" stop-color="#2563eb" stop-opacity="0.32"/>
+      <stop offset="100%" stop-color="#2563eb" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="o3" cx="78%" cy="12%" r="38%">
+      <stop offset="0%" stop-color="#4f46e5" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#4f46e5" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#0a0918"/>
+
+  <!-- Gradient orbs -->
+  <rect width="1200" height="630" fill="url(#o1)"/>
+  <rect width="1200" height="630" fill="url(#o2)"/>
+  <rect width="1200" height="630" fill="url(#o3)"/>
+
+  <!-- Subtle inset border -->
+  <rect x="2" y="2" width="1196" height="626" rx="18" fill="none"
+        stroke="#ffffff" stroke-opacity="0.06" stroke-width="1.5"/>
+
+  <!--
+    Flask / Alembic icon — geometric SVG paths, no emoji.
+    Local origin at top-left of the bounding box.
+    g translate=(505, 30): flask centered at global x=600.
+    Neck:  local x=63–127, y=0–62  → global x=568–632, y=30–92
+    Body:  local x=0–190, y=62–182 → global x=505–695, y=92–212
+  -->
+  <g transform="translate(505,30)">
+    <!-- Neck -->
+    <rect x="63" y="0" width="64" height="62" rx="5"
+          fill="none" stroke="url(#g)" stroke-width="4.5"/>
+    <!-- Body (trapezoid) -->
+    <path d="M 35 62 L 0 180 L 190 180 L 155 62 Z"
+          fill="none" stroke="url(#g)" stroke-width="4.5" stroke-linejoin="round"/>
+    <!-- Liquid fill — tracks the trapezoid's side slopes -->
+    <path d="M 18 122 L 0 180 L 190 180 L 172 122 Z"
+          fill="#7c3aed" fill-opacity="0.50"/>
+    <!-- Bubbles -->
+    <circle cx="95"  cy="156" r="8"   fill="#a78bfa" fill-opacity="0.82"/>
+    <circle cx="68"  cy="141" r="5.5" fill="#60a5fa" fill-opacity="0.72"/>
+    <circle cx="122" cy="136" r="4"   fill="#c4b5fd" fill-opacity="0.65"/>
+  </g>
+
+  <!-- Title -->
+  <text x="600" y="318"
+        text-anchor="middle"
+        font-family="sans-serif" font-weight="bold" font-size="104"
+        fill="url(#g)">Transfigure</text>
+
+  <!-- Tagline -->
+  <text x="600" y="374"
+        text-anchor="middle"
+        font-family="sans-serif" font-size="26"
+        fill="#ffffff" fill-opacity="0.56">File conversion that never leaves your browser.</text>
+
+  <!--
+    Format pills row — centered.
+    Total width of all pills + gaps ≈ 617 px → starting x ≈ 292
+  -->
+  <!-- PNG -->
+  <rect x="292" y="406" width="72" height="30" rx="15"
+        fill="none" stroke="#a78bfa" stroke-opacity="0.45" stroke-width="1.5"/>
+  <text x="328" y="426" text-anchor="middle"
+        font-family="monospace" font-size="12.5" fill="#a78bfa">PNG</text>
+
+  <!-- JPG -->
+  <rect x="372" y="406" width="68" height="30" rx="15"
+        fill="none" stroke="#a78bfa" stroke-opacity="0.45" stroke-width="1.5"/>
+  <text x="406" y="426" text-anchor="middle"
+        font-family="monospace" font-size="12.5" fill="#a78bfa">JPG</text>
+
+  <!-- WEBP -->
+  <rect x="448" y="406" width="76" height="30" rx="15"
+        fill="none" stroke="#60a5fa" stroke-opacity="0.45" stroke-width="1.5"/>
+  <text x="486" y="426" text-anchor="middle"
+        font-family="monospace" font-size="12.5" fill="#60a5fa">WEBP</text>
+
+  <!-- AVIF -->
+  <rect x="532" y="406" width="72" height="30" rx="15"
+        fill="none" stroke="#60a5fa" stroke-opacity="0.45" stroke-width="1.5"/>
+  <text x="568" y="426" text-anchor="middle"
+        font-family="monospace" font-size="12.5" fill="#60a5fa">AVIF</text>
+
+  <!-- CSV -->
+  <rect x="612" y="406" width="65" height="30" rx="15"
+        fill="none" stroke="#a78bfa" stroke-opacity="0.45" stroke-width="1.5"/>
+  <text x="644" y="426" text-anchor="middle"
+        font-family="monospace" font-size="12.5" fill="#a78bfa">CSV</text>
+
+  <!-- JSON -->
+  <rect x="685" y="406" width="72" height="30" rx="15"
+        fill="none" stroke="#60a5fa" stroke-opacity="0.45" stroke-width="1.5"/>
+  <text x="721" y="426" text-anchor="middle"
+        font-family="monospace" font-size="12.5" fill="#60a5fa">JSON</text>
+
+  <!-- DOCX -->
+  <rect x="765" y="406" width="76" height="30" rx="15"
+        fill="none" stroke="#a78bfa" stroke-opacity="0.45" stroke-width="1.5"/>
+  <text x="803" y="426" text-anchor="middle"
+        font-family="monospace" font-size="12.5" fill="#a78bfa">DOCX</text>
+
+  <!-- +more -->
+  <text x="851" y="426"
+        font-family="sans-serif" font-size="13"
+        fill="#ffffff" fill-opacity="0.28">+more</text>
+
+  <!-- "Powered by" note -->
+  <text x="600" y="468"
+        text-anchor="middle"
+        font-family="sans-serif" font-size="15"
+        fill="#ffffff" fill-opacity="0.22">Powered by Rust &amp; WebAssembly</text>
+
+  <!-- Thin separator -->
+  <line x1="80" y1="494" x2="1120" y2="494"
+        stroke="#ffffff" stroke-opacity="0.06" stroke-width="1"/>
+
+  <!-- Privacy/feature summary -->
+  <text x="600" y="545"
+        text-anchor="middle"
+        font-family="sans-serif" font-size="17"
+        fill="#ffffff" fill-opacity="0.30">No uploads  ·  No account  ·  No tracking  ·  Works offline  ·  Free forever</text>
+
+  <!-- Domain URL -->
+  <text x="600" y="592"
+        text-anchor="middle"
+        font-family="sans-serif" font-weight="bold" font-size="20"
+        fill="#ffffff" fill-opacity="0.46">transfigure.ing</text>
+</svg>

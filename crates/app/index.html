@@ -3,23 +3,83 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Transfigure — Private-first file conversion</title>
+    <title>
+      Transfigure — Free Private File Converter | No Uploads, No Tracking
+    </title>
     <meta
       name="description"
-      content="Convert files entirely in your browser. Your files never leave your device. Powered by Rust & WebAssembly."
+      content="Convert images, documents, spreadsheets and more — entirely in your browser. Your files never leave your device. No uploads, no accounts, no tracking. Free forever, powered by Rust & WebAssembly."
     />
+    <meta
+      name="keywords"
+      content="file converter, private file converter, offline file converter, convert png to jpg, convert markdown to html, convert csv to json, webassembly converter, no upload file converter, secure file conversion, GDPR file converter, browser file converter"
+    />
+    <meta name="author" content="RephlexZero" />
     <meta name="theme-color" content="#0a0918" />
+    <link rel="canonical" href="https://transfigure.ing" />
 
+    <!-- Open Graph -->
     <meta
       property="og:title"
-      content="Transfigure — Private-first file conversion"
+      content="Transfigure — Free Private File Converter"
     />
     <meta
       property="og:description"
-      content="Convert files entirely in your browser. Zero uploads. Zero tracking. Powered by Rust & WebAssembly."
+      content="Convert files entirely in your browser. Zero uploads. Zero tracking. No account needed. Free forever."
     />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://transfigure.ing" />
+    <meta property="og:image" content="https://transfigure.ing/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:site_name" content="Transfigure" />
+    <meta property="og:locale" content="en_GB" />
+
+    <!-- Twitter / X Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="Transfigure — Free Private File Converter"
+    />
+    <meta
+      name="twitter:description"
+      content="Convert files in your browser. Nothing is ever uploaded. No accounts. No tracking. Free forever."
+    />
+    <meta name="twitter:image" content="https://transfigure.ing/og.png" />
+
+    <!-- Structured data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Transfigure",
+        "url": "https://transfigure.ing",
+        "description": "A free, private file converter that runs entirely in your browser using WebAssembly. Supports images, documents, spreadsheets, config formats, and encoding. Your files never leave your device.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Any (runs in browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "GBP"
+        },
+        "featureList": [
+          "Client-side conversion — files never leave your device",
+          "No account required",
+          "No usage limits",
+          "Works offline after first visit",
+          "Image conversion: PNG, JPG, WebP, GIF, BMP, TIFF, AVIF, QOI, TGA, ICO",
+          "Document conversion: Markdown, HTML, DOCX, RTF",
+          "Data conversion: CSV, JSON, TSV, YAML, TOML",
+          "Archive output: ZIP, TAR.GZ, TAR.XZ, 7Z",
+          "Open source"
+        ],
+        "author": {
+          "@type": "Person",
+          "name": "RephlexZero",
+          "url": "https://github.com/RephlexZero"
+        }
+      }
+    </script>
 
     <link
       rel="icon"
@@ -28,6 +88,8 @@
     <link data-trunk rel="css" href="tailwind.css" />
     <link data-trunk rel="rust" data-wasm-opt="0" />
     <link data-trunk rel="copy-file" href="_headers" />
+    <link data-trunk rel="copy-file" href="robots.txt" />
+    <link data-trunk rel="copy-file" href="sitemap.xml" />
   </head>
   <body class="min-h-screen bg-base-300 text-base-content"></body>
 </html>

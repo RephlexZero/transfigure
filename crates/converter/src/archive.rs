@@ -73,3 +73,23 @@ pub fn create_tar_xz(entries: &[ArchiveEntry]) -> Result<Vec<u8>, String> {
         .map_err(|e| format!("xz compress error: {e}"))?;
     Ok(compressed)
 }
+
+/// Create a 7z archive from the given entries.
+pub fn create_7z(entries: &[ArchiveEntry]) -> Result<Vec<u8>, String> {
+    let buf = Cursor::new(Vec::new());
+    let mut writer =
+        sevenz_rust2::ArchiveWriter::new(buf).map_err(|e| format!("7z create error: {e}"))?;
+
+    for entry in entries {
+        let archive_entry = sevenz_rust2::ArchiveEntry::new_file(&entry.name);
+        let reader = Cursor::new(&entry.data);
+        writer
+            .push_archive_entry(archive_entry, Some(reader))
+            .map_err(|e| format!("7z entry error: {e}"))?;
+    }
+
+    let cursor = writer
+        .finish()
+        .map_err(|e| format!("7z finish error: {e}"))?;
+    Ok(cursor.into_inner())
+}

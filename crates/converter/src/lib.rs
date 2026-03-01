@@ -23,7 +23,7 @@ pub fn convert(input: &[u8], config_json: &str) -> Result<Vec<u8>, String> {
 
     match (from.as_str(), to.as_str()) {
         // Image conversions
-        (f, t) if is_image_format(f) && is_image_format(t) => {
+        (f, t) if is_image_input_format(f) && is_image_output_format(t) => {
             image_conv::convert_image(input, f, t, config.quality)
         }
         ("svg", "png") => image_conv::svg_to_png(input),
@@ -32,6 +32,9 @@ pub fn convert(input: &[u8], config_json: &str) -> Result<Vec<u8>, String> {
         ("md" | "markdown", "html") => document::markdown_to_html(input),
         ("md" | "markdown", "txt" | "text") => document::markdown_to_text(input),
         ("html", "md" | "markdown") => document::html_to_markdown(input),
+        ("docx", "txt" | "text") => document::docx_to_text(input),
+        ("docx", "html") => document::docx_to_html(input),
+        ("rtf", "txt" | "text") => document::rtf_to_text(input),
 
         // Spreadsheet / data
         ("csv", "json") => spreadsheet::csv_to_json(input),
@@ -63,16 +66,42 @@ pub fn convert(input: &[u8], config_json: &str) -> Result<Vec<u8>, String> {
 pub fn get_output_formats(input_ext: &str) -> Vec<&'static str> {
     let ext = input_ext.to_lowercase();
     match ext.as_str() {
-        "png" => vec!["jpg", "webp", "gif", "bmp", "tiff"],
-        "jpg" | "jpeg" => vec!["png", "webp", "gif", "bmp", "tiff"],
-        "webp" => vec!["png", "jpg", "gif", "bmp", "tiff"],
-        "gif" => vec!["png", "jpg", "webp", "bmp", "tiff"],
-        "bmp" => vec!["png", "jpg", "webp", "gif", "tiff"],
-        "tiff" | "tif" => vec!["png", "jpg", "webp", "gif", "bmp"],
+        "png" => vec![
+            "jpg", "webp", "avif", "gif", "bmp", "tiff", "qoi", "tga", "ico",
+        ],
+        "jpg" | "jpeg" => vec![
+            "png", "webp", "avif", "gif", "bmp", "tiff", "qoi", "tga", "ico",
+        ],
+        "webp" => vec![
+            "png", "jpg", "avif", "gif", "bmp", "tiff", "qoi", "tga", "ico",
+        ],
+        "gif" => vec![
+            "png", "jpg", "webp", "avif", "bmp", "tiff", "qoi", "tga", "ico",
+        ],
+        "bmp" => vec![
+            "png", "jpg", "webp", "avif", "gif", "tiff", "qoi", "tga", "ico",
+        ],
+        "tiff" | "tif" => vec![
+            "png", "jpg", "webp", "avif", "gif", "bmp", "qoi", "tga", "ico",
+        ],
+        "ico" => vec![
+            "png", "jpg", "webp", "avif", "gif", "bmp", "tiff", "qoi", "tga",
+        ],
+        "qoi" => vec![
+            "png", "jpg", "webp", "avif", "gif", "bmp", "tiff", "tga", "ico",
+        ],
+        "tga" => vec![
+            "png", "jpg", "webp", "avif", "gif", "bmp", "tiff", "qoi", "ico",
+        ],
+        "hdr" => vec!["png", "jpg", "webp", "avif", "bmp", "tiff", "tga"],
+        "dds" => vec!["png", "jpg", "webp", "avif", "bmp", "tiff", "tga"],
+        "exr" => vec!["png", "jpg", "webp", "avif", "bmp", "tiff", "tga"],
         "svg" => vec!["png"],
         "mp3" | "flac" | "ogg" | "wav" => vec!["wav"],
         "md" | "markdown" => vec!["html", "txt"],
         "html" => vec!["md"],
+        "docx" => vec!["txt", "html"],
+        "rtf" => vec!["txt"],
         "csv" => vec!["json", "tsv"],
         "tsv" => vec!["csv"],
         "json" => vec!["csv", "yaml", "toml"],
@@ -94,10 +123,46 @@ pub fn detect_format(filename: &str) -> Option<String> {
     }
 }
 
-fn is_image_format(fmt: &str) -> bool {
+/// Formats that can be read as image input (excludes AVIF, which needs dav1d C lib for decode).
+fn is_image_input_format(fmt: &str) -> bool {
     matches!(
         fmt,
-        "png" | "jpg" | "jpeg" | "webp" | "gif" | "bmp" | "tiff" | "tif"
+        "png"
+            | "jpg"
+            | "jpeg"
+            | "webp"
+            | "gif"
+            | "bmp"
+            | "tiff"
+            | "tif"
+            | "ico"
+            | "qoi"
+            | "tga"
+            | "hdr"
+            | "dds"
+            | "exr"
+    )
+}
+
+/// Formats that can be written as image output (includes AVIF via pure-Rust ravif encoder).
+fn is_image_output_format(fmt: &str) -> bool {
+    matches!(
+        fmt,
+        "png"
+            | "jpg"
+            | "jpeg"
+            | "webp"
+            | "gif"
+            | "bmp"
+            | "tiff"
+            | "tif"
+            | "avif"
+            | "ico"
+            | "qoi"
+            | "tga"
+            | "hdr"
+            | "dds"
+            | "exr"
     )
 }
 
@@ -116,12 +181,21 @@ fn is_known_format(fmt: &str) -> bool {
             | "bmp"
             | "tiff"
             | "tif"
+            | "avif"
+            | "ico"
+            | "qoi"
+            | "tga"
+            | "hdr"
+            | "dds"
+            | "exr"
             | "svg"
             | "md"
             | "markdown"
             | "html"
             | "txt"
             | "text"
+            | "docx"
+            | "rtf"
             | "csv"
             | "tsv"
             | "json"
@@ -360,6 +434,117 @@ mod tests {
     }
 
     #[test]
+    fn convert_png_to_avif() {
+        let png = create_test_png();
+        let result = convert(&png, r#"{"from":"png","to":"avif"}"#);
+        assert!(
+            result.is_ok(),
+            "Expected AVIF output, got: {:?}",
+            result.err()
+        );
+    }
+
+    #[test]
+    fn convert_png_to_qoi() {
+        let png = create_test_png();
+        let result = convert(&png, r#"{"from":"png","to":"qoi"}"#);
+        assert!(result.is_ok());
+        let qoi = result.unwrap();
+        // QOI magic: "qoif"
+        assert_eq!(&qoi[..4], b"qoif");
+    }
+
+    #[test]
+    fn convert_qoi_roundtrip() {
+        let png = create_test_png();
+        let qoi = convert(&png, r#"{"from":"png","to":"qoi"}"#).unwrap();
+        let back = convert(&qoi, r#"{"from":"qoi","to":"png"}"#);
+        assert!(back.is_ok());
+        assert_eq!(&back.unwrap()[..4], b"\x89PNG");
+    }
+
+    #[test]
+    fn convert_png_to_tga() {
+        let png = create_test_png();
+        let result = convert(&png, r#"{"from":"png","to":"tga"}"#);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn convert_png_to_ico() {
+        let png = create_test_png();
+        let result = convert(&png, r#"{"from":"png","to":"ico"}"#);
+        assert!(result.is_ok());
+        let ico = result.unwrap();
+        // ICO magic: 00 00 01 00
+        assert_eq!(&ico[..4], &[0x00, 0x00, 0x01, 0x00]);
+    }
+
+    #[test]
+    fn convert_ico_to_png() {
+        // Create an ICO from a PNG, then convert back to PNG
+        let original_png = create_test_png();
+        let ico = convert(&original_png, r#"{"from":"png","to":"ico"}"#).unwrap();
+        let png = convert(&ico, r#"{"from":"ico","to":"png"}"#);
+        assert!(png.is_ok());
+        assert_eq!(&png.unwrap()[..4], b"\x89PNG");
+    }
+
+    #[test]
+    fn convert_docx_to_text() {
+        // Create a minimal valid DOCX ZIP file containing word/document.xml
+        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:p><w:r><w:t>Hello World</w:t></w:r></w:p>
+    <w:p><w:r><w:t>Second paragraph</w:t></w:r></w:p>
+  </w:body>
+</w:document>"#;
+        let docx = make_minimal_docx(xml);
+        let result = convert(&docx, r#"{"from":"docx","to":"txt"}"#).unwrap();
+        let text = String::from_utf8(result).unwrap();
+        assert!(text.contains("Hello World"));
+        assert!(text.contains("Second paragraph"));
+    }
+
+    #[test]
+    fn convert_docx_to_html() {
+        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:p><w:r><w:t>Content</w:t></w:r></w:p>
+  </w:body>
+</w:document>"#;
+        let docx = make_minimal_docx(xml);
+        let result = convert(&docx, r#"{"from":"docx","to":"html"}"#).unwrap();
+        let html = String::from_utf8(result).unwrap();
+        assert!(html.contains("<html>") || html.contains("<p>"));
+        assert!(html.contains("Content"));
+    }
+
+    #[test]
+    fn convert_docx_missing_document_xml() {
+        // A ZIP that doesn't contain word/document.xml
+        let entries = vec![archive::ArchiveEntry {
+            name: "unrelated.txt".into(),
+            data: b"not a docx".to_vec(),
+        }];
+        let zip = archive::create_zip(&entries).unwrap();
+        let result = convert(&zip, r#"{"from":"docx","to":"txt"}"#);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("word/document.xml"));
+    }
+
+    #[test]
+    fn convert_rtf_to_text() {
+        let rtf = br#"{\rtf1\ansi Hello World}"#;
+        let result = convert(rtf, r#"{"from":"rtf","to":"txt"}"#);
+        assert!(result.is_ok(), "RTF conversion failed: {:?}", result.err());
+        let text = String::from_utf8(result.unwrap()).unwrap();
+        assert!(text.contains("Hello"));
+    }
+
+    #[test]
     fn convert_invalid_image_data() {
         let result = convert(b"not an image", r#"{"from":"png","to":"jpg"}"#);
         assert!(result.is_err());
@@ -468,6 +653,16 @@ mod tests {
         let mut buf = std::io::Cursor::new(Vec::new());
         img.write_to(&mut buf, image::ImageFormat::Png).unwrap();
         buf.into_inner()
+    }
+
+    /// Build a minimal DOCX ZIP containing only `word/document.xml` with the
+    /// provided XML content. Just enough to test our extraction logic.
+    fn make_minimal_docx(document_xml: &str) -> Vec<u8> {
+        let entries = vec![archive::ArchiveEntry {
+            name: "word/document.xml".into(),
+            data: document_xml.as_bytes().to_vec(),
+        }];
+        archive::create_zip(&entries).unwrap()
     }
 
     /// Synthesise a short mono sine-wave WAV (440 Hz, 44100 Hz sample rate, 16-bit PCM).

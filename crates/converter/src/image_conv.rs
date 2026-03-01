@@ -7,13 +7,22 @@ pub fn convert_image(
     to: &str,
     quality: Option<u8>,
 ) -> Result<Vec<u8>, String> {
-    let in_format = parse_format(from)?;
-    let out_format = parse_format(to)?;
+    // ICO input: decode to a DynamicImage via the ico crate
+    let img: DynamicImage = if from == "ico" {
+        decode_ico(input)?
+    } else {
+        let in_format = parse_decode_format(from)?;
+        ImageReader::with_format(Cursor::new(input), in_format)
+            .decode()
+            .map_err(|e| format!("Failed to decode {from} image: {e}"))?
+    };
 
-    let img: DynamicImage = ImageReader::with_format(Cursor::new(input), in_format)
-        .decode()
-        .map_err(|e| format!("Failed to decode {from} image: {e}"))?;
+    // ICO output: encode via ico crate
+    if to == "ico" {
+        return encode_ico(&img);
+    }
 
+    let out_format = parse_encode_format(to)?;
     let mut output = Vec::new();
     let mut cursor = Cursor::new(&mut output);
 
@@ -30,6 +39,45 @@ pub fn convert_image(
         }
     }
 
+    Ok(output)
+}
+
+/// Decode an ICO file and return the largest image as a DynamicImage.
+fn decode_ico(input: &[u8]) -> Result<DynamicImage, String> {
+    let cursor = Cursor::new(input);
+    let icon_dir = ico::IconDir::read(cursor).map_err(|e| format!("Failed to read ICO: {e}"))?;
+    let entry = icon_dir
+        .entries()
+        .iter()
+        .max_by_key(|e| e.width() * e.height())
+        .ok_or_else(|| "ICO file contains no images".to_string())?;
+    let image = entry
+        .decode()
+        .map_err(|e| format!("Failed to decode ICO entry: {e}"))?;
+    let rgba =
+        image::RgbaImage::from_raw(image.width(), image.height(), image.rgba_data().to_vec())
+            .ok_or_else(|| "Failed to construct RGBA image from ICO data".to_string())?;
+    Ok(DynamicImage::ImageRgba8(rgba))
+}
+
+/// Encode a DynamicImage as a single-image ICO file.
+fn encode_ico(img: &DynamicImage) -> Result<Vec<u8>, String> {
+    let rgba = img.to_rgba8();
+    let (width, height) = rgba.dimensions();
+    // ico crate panics if width/height < 1 — guard here
+    if width == 0 || height == 0 {
+        return Err("Cannot encode zero-dimension image as ICO".into());
+    }
+    let ico_img = ico::IconImage::from_rgba_data(width, height, rgba.into_raw());
+    let mut icon_dir = ico::IconDir::new(ico::ResourceType::Icon);
+    icon_dir.add_entry(
+        ico::IconDirEntry::encode(&ico_img)
+            .map_err(|e| format!("Failed to encode ICO entry: {e}"))?,
+    );
+    let mut output = Vec::new();
+    icon_dir
+        .write(Cursor::new(&mut output))
+        .map_err(|e| format!("Failed to write ICO: {e}"))?;
     Ok(output)
 }
 
@@ -61,7 +109,10 @@ pub fn svg_to_png(input: &[u8]) -> Result<Vec<u8>, String> {
         .map_err(|e| format!("Failed to encode PNG: {e}"))
 }
 
-fn parse_format(fmt: &str) -> Result<ImageFormat, String> {
+/// Formats supported for **decoding** (reading input files).
+/// AVIF decode requires `dav1d` (C binding) — excluded.
+/// ICO is handled separately via the `ico` crate.
+fn parse_decode_format(fmt: &str) -> Result<ImageFormat, String> {
     match fmt {
         "png" => Ok(ImageFormat::Png),
         "jpg" | "jpeg" => Ok(ImageFormat::Jpeg),
@@ -69,6 +120,32 @@ fn parse_format(fmt: &str) -> Result<ImageFormat, String> {
         "bmp" => Ok(ImageFormat::Bmp),
         "webp" => Ok(ImageFormat::WebP),
         "tiff" | "tif" => Ok(ImageFormat::Tiff),
-        _ => Err(format!("Unsupported image format: {fmt}")),
+        "qoi" => Ok(ImageFormat::Qoi),
+        "tga" => Ok(ImageFormat::Tga),
+        "hdr" => Ok(ImageFormat::Hdr),
+        "dds" => Ok(ImageFormat::Dds),
+        "exr" => Ok(ImageFormat::OpenExr),
+        _ => Err(format!("Unsupported input image format: {fmt}")),
+    }
+}
+
+/// Formats supported for **encoding** (writing output files).
+/// Includes AVIF (pure-Rust ravif encoder) in addition to all decode formats.
+/// ICO is handled separately via the `ico` crate.
+fn parse_encode_format(fmt: &str) -> Result<ImageFormat, String> {
+    match fmt {
+        "png" => Ok(ImageFormat::Png),
+        "jpg" | "jpeg" => Ok(ImageFormat::Jpeg),
+        "gif" => Ok(ImageFormat::Gif),
+        "bmp" => Ok(ImageFormat::Bmp),
+        "webp" => Ok(ImageFormat::WebP),
+        "tiff" | "tif" => Ok(ImageFormat::Tiff),
+        "avif" => Ok(ImageFormat::Avif),
+        "qoi" => Ok(ImageFormat::Qoi),
+        "tga" => Ok(ImageFormat::Tga),
+        "hdr" => Ok(ImageFormat::Hdr),
+        "dds" => Ok(ImageFormat::Dds),
+        "exr" => Ok(ImageFormat::OpenExr),
+        _ => Err(format!("Unsupported output image format: {fmt}")),
     }
 }

@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/converter",
     "crates/app",
+    "crates/og-gen",
 ]
 
 [workspace.package]

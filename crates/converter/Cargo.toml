@@ -7,7 +7,9 @@ license-file.workspace = true
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "bmp", "webp", "tiff"] }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "bmp", "webp", "tiff", "avif", "qoi", "tga", "hdr", "dds", "exr"] }
+ico = "0.5"
+rtf-parser = "0.4"
 comrak = { version = "0.36", default-features = false }
 csv = "1"
 base64 = "0.22"
