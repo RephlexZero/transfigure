@@ -128,7 +128,7 @@ pub fn SupportBanner() -> impl IntoView {
                 <p class="text-sm text-base-content/50 leading-relaxed mb-6 max-w-md mx-auto">
                     "No limits, no accounts, no ads — and no plans to change that. "
                     "I'm a student in the UK keeping this running on a ~£15/year domain. "
-                    "If Transfigure has saved you some time, a small donation is genuinely appreciated."
+                    "If Transfigure has saved you some time, any support is genuinely appreciated."
                 </p>
                 <div class="flex flex-wrap justify-center gap-3">
                     <a
