@@ -6,7 +6,7 @@ pub fn format_icon(ext: &str) -> &'static str {
         "png" | "jpg" | "jpeg" | "gif" | "webp" | "bmp" | "tiff" | "tif" | "svg" | "avif"
         | "ico" | "qoi" | "tga" | "hdr" | "dds" | "exr" => "🖼️",
         "md" | "markdown" | "html" | "txt" | "text" => "📝",
-        "docx" | "rtf" => "📄",
+        "docx" | "rtf" | "pdf" => "📄",
         "csv" | "tsv" | "json" => "📊",
         "yaml" | "yml" | "toml" => "⚙️",
         "base64" => "🔐",
@@ -43,6 +43,7 @@ pub fn mime_type_for(ext: &str) -> &'static str {
         "md" | "markdown" => "text/markdown",
         "txt" | "text" => "text/plain",
         "rtf" => "application/rtf",
+        "pdf" => "application/pdf",
         "docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         "csv" => "text/csv",
         "tsv" => "text/tab-separated-values",

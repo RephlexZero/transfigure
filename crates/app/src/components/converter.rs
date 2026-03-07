@@ -66,6 +66,11 @@ pub fn ConverterSection(
         files.update(|list| {
             if let Some(f) = list.iter_mut().find(|f| f.id == file_id) {
                 f.target = Some(target);
+                // Allow re-converting: if the file was already done or errored,
+                // reset it to Pending so the Convert button re-appears.
+                if matches!(f.status, FileStatus::Done(_) | FileStatus::Error(_)) {
+                    f.status = FileStatus::Pending;
+                }
             }
         });
     };
@@ -328,7 +333,7 @@ fn FileRow(
 
                 <select
                     class="select select-sm select-bordered bg-base-100/80 min-w-[100px] text-sm font-medium"
-                    prop:disabled=is_done || is_converting
+                    prop:disabled=is_converting
                     on:change=move |ev| {
                         let val = event_target_value(&ev);
                         on_set_target(file_id, val);
@@ -460,6 +465,12 @@ fn DropZone(
 ) -> impl IntoView {
     let input_ref = NodeRef::<leptos::html::Input>::new();
 
+    let accept_str: String = converter::ALL_INPUT_FORMATS
+        .iter()
+        .map(|ext| format!(".{ext}"))
+        .collect::<Vec<_>>()
+        .join(",");
+
     let process_file_list = {
         let add_files = add_files.clone();
         move |file_list: web_sys::FileList| {
@@ -548,7 +559,7 @@ fn DropZone(
                 node_ref=input_ref
                 type="file"
                 multiple=true
-                accept=".png,.jpg,.jpeg,.webp,.gif,.bmp,.tiff,.tif,.svg,.md,.markdown,.html,.txt,.csv,.tsv,.json,.yaml,.yml,.toml,.base64,.mp3,.flac,.ogg,.wav"
+                accept={accept_str}
                 class="hidden"
                 on:change=on_change
             />
@@ -582,7 +593,7 @@ fn DropZone(
                                     " · Multiple files supported"
                                 </p>
                             </div>
-                            <p class="text-xs text-base-content/30">"Images · Documents · Data · Config files"</p>
+                            <p class="text-xs text-base-content/30">"Images · Audio · Documents · Data · Config"</p>
                         </div>
                     }.into_any()
                 }

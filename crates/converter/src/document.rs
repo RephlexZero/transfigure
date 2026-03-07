@@ -1,5 +1,227 @@
 use base64::Engine;
 
+// ── PDF ─────────────────────────────────────────────────
+
+/// Extract plain text from a PDF file using lopdf.
+pub fn pdf_to_text(input: &[u8]) -> Result<Vec<u8>, String> {
+    let doc = lopdf::Document::load_mem(input)
+        .map_err(|e| format!("Failed to load PDF: {e}"))?;
+
+    let page_nums: Vec<u32> = {
+        let mut nums: Vec<u32> = doc.get_pages().keys().cloned().collect();
+        nums.sort_unstable();
+        nums
+    };
+
+    if page_nums.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let text = doc
+        .extract_text(&page_nums)
+        .map_err(|e| format!("Failed to extract PDF text: {e}"))?;
+
+    Ok(text.trim().to_owned().into_bytes())
+}
+
+/// Extract text from a PDF and wrap it in a minimal HTML document.
+pub fn pdf_to_html(input: &[u8]) -> Result<Vec<u8>, String> {
+    let text_bytes = pdf_to_text(input)?;
+    let text = String::from_utf8_lossy(&text_bytes);
+    let mut html =
+        String::from("<!DOCTYPE html>\n<html><head><meta charset=\"utf-8\"></head><body><pre>\n");
+    html.push_str(&html_escape(&text));
+    html.push_str("\n</pre></body></html>");
+    Ok(html.into_bytes())
+}
+
+/// Generate a PDF from plain text using the built-in Helvetica Type1 font.
+pub fn text_to_pdf(input: &[u8]) -> Result<Vec<u8>, String> {
+    let text = std::str::from_utf8(input).map_err(|e| format!("Invalid UTF-8: {e}"))?;
+    Ok(build_text_pdf(text))
+}
+
+/// Generate a PDF from Markdown (renders to plain text first, then builds PDF).
+pub fn markdown_to_pdf(input: &[u8]) -> Result<Vec<u8>, String> {
+    let text_bytes = markdown_to_text(input)?;
+    text_to_pdf(&text_bytes)
+}
+
+/// Generate a PDF from HTML (strips tags to plain text, then builds PDF).
+pub fn html_to_pdf(input: &[u8]) -> Result<Vec<u8>, String> {
+    let html = std::str::from_utf8(input).map_err(|e| format!("Invalid UTF-8: {e}"))?;
+    let text = strip_html_tags(html);
+    Ok(build_text_pdf(&text))
+}
+
+/// Build a minimal valid PDF/1.4 document from plain text.
+///
+/// Uses the built-in Helvetica Type1 font with WinAnsiEncoding; no font
+/// embedding required. Pages are A4 (595.28 × 841.89 pt).
+fn build_text_pdf(text: &str) -> Vec<u8> {
+    const FONT_SIZE: f64 = 11.0;
+    const LINE_HEIGHT: f64 = 14.0;
+    const MARGIN_X: f64 = 50.0;
+    const MARGIN_Y: f64 = 50.0;
+    const PAGE_W: f64 = 595.28;
+    const PAGE_H: f64 = 841.89;
+    const CHARS_PER_LINE: usize = 90;
+
+    let lines_per_page = ((PAGE_H - 2.0 * MARGIN_Y) / LINE_HEIGHT).floor() as usize;
+
+    // Wrap text into lines that fit the page width.
+    let mut all_lines: Vec<String> = Vec::new();
+    for raw in text.lines() {
+        if raw.is_empty() {
+            all_lines.push(String::new());
+        } else {
+            let chars: Vec<char> = raw.chars().collect();
+            let mut pos = 0;
+            while pos < chars.len() {
+                let end = (pos + CHARS_PER_LINE).min(chars.len());
+                all_lines.push(chars[pos..end].iter().collect());
+                pos = end;
+            }
+        }
+    }
+    if all_lines.is_empty() {
+        all_lines.push(String::new());
+    }
+
+    // Split all lines into pages.
+    let page_chunks: Vec<Vec<String>> = all_lines
+        .chunks(lines_per_page)
+        .map(|c| c.to_vec())
+        .collect();
+    let n_pages = page_chunks.len();
+
+    // Object numbering (1-based):
+    //   1         → Catalog
+    //   2         → Pages
+    //   3..2+n    → Page objects (n_pages)
+    //   3+n..2+2n → Content stream objects (n_pages)
+    //   3+2n      → Font resource
+    let font_obj = 3 + 2 * n_pages;
+    let total_objs = font_obj;
+
+    let mut offsets = vec![0usize; total_objs + 1]; // offsets[obj_num] = byte offset
+    let mut pdf: Vec<u8> = Vec::with_capacity(4096);
+
+    // ── Header ───────────────────────────────────────
+    pdf.extend_from_slice(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n");
+
+    // Helper: write a simple dict object.
+    macro_rules! obj {
+        ($n:expr, $body:expr) => {{
+            offsets[$n] = pdf.len();
+            pdf.extend_from_slice(format!("{} 0 obj\n", $n).as_bytes());
+            pdf.extend_from_slice($body);
+            pdf.extend_from_slice(b"\nendobj\n");
+        }};
+    }
+
+    // ── Catalog ──────────────────────────────────────
+    obj!(1usize, b"<< /Type /Catalog /Pages 2 0 R >>");
+
+    // ── Pages ────────────────────────────────────────
+    let kids = (3..3 + n_pages)
+        .map(|k| format!("{k} 0 R"))
+        .collect::<Vec<_>>()
+        .join(" ");
+    obj!(
+        2usize,
+        format!("<< /Type /Pages /Kids [{kids}] /Count {n_pages} >>").as_bytes()
+    );
+
+    // ── Page objects ─────────────────────────────────
+    for i in 0..n_pages {
+        let page_n = 3 + i;
+        let content_n = 3 + n_pages + i;
+        let dict = format!(
+            "<< /Type /Page /Parent 2 0 R \
+             /MediaBox [0 0 {PAGE_W} {PAGE_H}] \
+             /Contents {content_n} 0 R \
+             /Resources << /Font << /F1 {font_obj} 0 R >> >> >>"
+        );
+        obj!(page_n, dict.as_bytes());
+    }
+
+    // ── Content streams ───────────────────────────────
+    let start_y = PAGE_H - MARGIN_Y;
+    for (i, lines) in page_chunks.iter().enumerate() {
+        let content_n = 3 + n_pages + i;
+
+        let mut stream = String::new();
+        stream.push_str("BT\n");
+        stream.push_str(&format!("/F1 {FONT_SIZE:.1} Tf\n"));
+
+        for (j, line) in lines.iter().enumerate() {
+            let esc = pdf_escape_string(line);
+            if j == 0 {
+                stream.push_str(&format!(
+                    "{MARGIN_X:.3} {start_y:.3} Td\n({esc}) Tj\n"
+                ));
+            } else {
+                stream.push_str(&format!("0 -{LINE_HEIGHT:.3} Td\n({esc}) Tj\n"));
+            }
+        }
+        stream.push_str("ET\n");
+
+        let stream_bytes = stream.as_bytes();
+        let len = stream_bytes.len();
+        offsets[content_n] = pdf.len();
+        pdf.extend_from_slice(
+            format!("{content_n} 0 obj\n<< /Length {len} >>\nstream\n").as_bytes(),
+        );
+        pdf.extend_from_slice(stream_bytes);
+        pdf.extend_from_slice(b"endstream\nendobj\n");
+    }
+
+    // ── Font resource ─────────────────────────────────
+    obj!(
+        font_obj,
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica \
+          /Encoding /WinAnsiEncoding >>"
+    );
+
+    // ── Cross-reference table ─────────────────────────
+    let xref_offset = pdf.len();
+    let xref_size = total_objs + 1; // entries 0..=total_objs
+    pdf.extend_from_slice(format!("xref\n0 {xref_size}\n").as_bytes());
+    pdf.extend_from_slice(b"0000000000 65535 f\r\n"); // free entry for object 0
+    for n in 1..=total_objs {
+        pdf.extend_from_slice(format!("{:010} 00000 n\r\n", offsets[n]).as_bytes());
+    }
+
+    // ── Trailer ───────────────────────────────────────
+    pdf.extend_from_slice(
+        format!(
+            "trailer\n<< /Size {xref_size} /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF\n"
+        )
+        .as_bytes(),
+    );
+
+    pdf
+}
+
+/// Encode a string for inclusion in a PDF literal string `(...)`.
+fn pdf_escape_string(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '(' => out.push_str("\\("),
+            ')' => out.push_str("\\)"),
+            '\\' => out.push_str("\\\\"),
+            '\r' => out.push_str("\\r"),
+            '\n' => out.push_str("\\n"),
+            c if (c as u32) < 32 => {} // skip control characters
+            c if (c as u32) > 255 => {} // skip non-Latin-1 for WinAnsiEncoding
+            c => out.push(c),
+        }
+    }
+    out
+}
+
 pub fn markdown_to_html(input: &[u8]) -> Result<Vec<u8>, String> {
     let md = std::str::from_utf8(input).map_err(|e| format!("Invalid UTF-8: {e}"))?;
     let html = comrak::markdown_to_html(md, &comrak::Options::default());

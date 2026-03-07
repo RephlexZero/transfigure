@@ -6,6 +6,18 @@ mod document;
 mod image_conv;
 mod spreadsheet;
 
+/// All input file formats the converter can handle.
+/// This is the single source of truth for the file picker's `accept` attribute.
+pub const ALL_INPUT_FORMATS: &[&str] = &[
+    // images
+    "png", "jpg", "jpeg", "webp", "gif", "bmp", "tiff", "tif", "ico", "qoi", "tga", "hdr", "dds",
+    "exr", "svg", // audio
+    "mp3", "flac", "ogg", "wav", // documents
+    "md", "markdown", "html", "txt", "docx", "rtf", "pdf", // data / config
+    "csv", "tsv", "json", "yaml", "yml", "toml", // encoding
+    "base64",
+];
+
 #[derive(Deserialize)]
 pub struct ConvertConfig {
     pub from: String,
@@ -31,10 +43,16 @@ pub fn convert(input: &[u8], config_json: &str) -> Result<Vec<u8>, String> {
         // Documents
         ("md" | "markdown", "html") => document::markdown_to_html(input),
         ("md" | "markdown", "txt" | "text") => document::markdown_to_text(input),
+        ("md" | "markdown", "pdf") => document::markdown_to_pdf(input),
         ("html", "md" | "markdown") => document::html_to_markdown(input),
+        ("html", "pdf") => document::html_to_pdf(input),
         ("docx", "txt" | "text") => document::docx_to_text(input),
         ("docx", "html") => document::docx_to_html(input),
         ("rtf", "txt" | "text") => document::rtf_to_text(input),
+        // PDF
+        ("pdf", "txt" | "text") => document::pdf_to_text(input),
+        ("pdf", "html") => document::pdf_to_html(input),
+        ("txt" | "text", "pdf") => document::text_to_pdf(input),
 
         // Spreadsheet / data
         ("csv", "json") => spreadsheet::csv_to_json(input),
@@ -98,10 +116,12 @@ pub fn get_output_formats(input_ext: &str) -> Vec<&'static str> {
         "exr" => vec!["png", "jpg", "webp", "avif", "bmp", "tiff", "tga"],
         "svg" => vec!["png"],
         "mp3" | "flac" | "ogg" | "wav" => vec!["wav"],
-        "md" | "markdown" => vec!["html", "txt"],
-        "html" => vec!["md"],
+        "md" | "markdown" => vec!["html", "txt", "pdf"],
+        "html" => vec!["md", "pdf"],
         "docx" => vec!["txt", "html"],
         "rtf" => vec!["txt"],
+        "pdf" => vec!["txt", "html"],
+        "txt" | "text" => vec!["pdf"],
         "csv" => vec!["json", "tsv"],
         "tsv" => vec!["csv"],
         "json" => vec!["csv", "yaml", "toml"],
@@ -207,6 +227,7 @@ fn is_known_format(fmt: &str) -> bool {
             | "flac"
             | "ogg"
             | "wav"
+            | "pdf"
     )
 }
 
@@ -253,7 +274,9 @@ mod tests {
     #[test]
     fn output_formats_for_markdown() {
         let fmts = get_output_formats("md");
-        assert_eq!(fmts, vec!["html", "txt"]);
+        assert!(fmts.contains(&"html"));
+        assert!(fmts.contains(&"txt"));
+        assert!(fmts.contains(&"pdf"));
     }
 
     #[test]
@@ -272,6 +295,34 @@ mod tests {
     #[test]
     fn output_formats_unknown_defaults_to_base64() {
         assert_eq!(get_output_formats("xyz"), vec!["base64"]);
+    }
+
+    /// Every format listed in ALL_INPUT_FORMATS must return at least one output
+    /// option from get_output_formats.  This ensures the file picker never
+    /// accepts a file type for which no conversion is offered.
+    #[test]
+    fn all_input_formats_have_output_options() {
+        for fmt in ALL_INPUT_FORMATS {
+            let outputs = get_output_formats(fmt);
+            assert!(
+                !outputs.is_empty(),
+                "ALL_INPUT_FORMATS contains '{}' but get_output_formats returns nothing for it",
+                fmt
+            );
+        }
+    }
+
+    /// ALL_INPUT_FORMATS must not list any format that is_known_format doesn't
+    /// recognise, otherwise detect_format would silently drop those files.
+    #[test]
+    fn all_input_formats_are_known() {
+        for fmt in ALL_INPUT_FORMATS {
+            assert!(
+                is_known_format(fmt),
+                "ALL_INPUT_FORMATS contains '{}' which is not in is_known_format",
+                fmt
+            );
+        }
     }
 
     // ── convert: config parsing ─────────────────────
@@ -810,5 +861,276 @@ mod tests {
         let result = convert(b"data", r#"{"from":"mp3","to":"png"}"#);
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("Unsupported conversion"));
+    }
+
+    // ── detect_format: pdf / txt ─────────────────────
+
+    #[test]
+    fn detect_format_pdf_and_txt() {
+        assert_eq!(detect_format("report.pdf"), Some("pdf".into()));
+        assert_eq!(detect_format("README.txt"), Some("txt".into()));
+        assert_eq!(detect_format("notes.text"), Some("text".into()));
+        assert_eq!(detect_format("REPORT.PDF"), Some("pdf".into()));
+    }
+
+    // ── get_output_formats: pdf / html / txt ─────────
+
+    #[test]
+    fn output_formats_for_pdf() {
+        let fmts = get_output_formats("pdf");
+        assert!(fmts.contains(&"txt"));
+        assert!(fmts.contains(&"html"));
+    }
+
+    #[test]
+    fn output_formats_for_txt() {
+        let fmts = get_output_formats("txt");
+        assert!(fmts.contains(&"pdf"));
+    }
+
+    #[test]
+    fn output_formats_for_html_includes_pdf() {
+        let fmts = get_output_formats("html");
+        assert!(fmts.contains(&"md"));
+        assert!(fmts.contains(&"pdf"));
+    }
+
+    // ── convert: PDF generation (text → pdf) ─────────
+
+    #[test]
+    fn text_to_pdf_produces_valid_header() {
+        let result = convert(b"Hello World", r#"{"from":"txt","to":"pdf"}"#);
+        assert!(result.is_ok(), "text→pdf failed: {:?}", result.err());
+        let pdf = result.unwrap();
+        assert!(pdf.starts_with(b"%PDF-"), "output should start with %PDF-");
+        assert!(
+            pdf.windows(5).any(|w| w == b"%%EOF"),
+            "output should contain %%EOF"
+        );
+    }
+
+    #[test]
+    fn text_to_pdf_non_empty_output() {
+        let result = convert(b"Line 1\nLine 2\nLine 3", r#"{"from":"txt","to":"pdf"}"#).unwrap();
+        // A real PDF with 3 lines should be several hundred bytes at least
+        assert!(result.len() > 200, "PDF output unexpectedly small");
+    }
+
+    #[test]
+    fn text_to_pdf_empty_input() {
+        // Empty text should still produce a valid PDF
+        let result = convert(b"", r#"{"from":"txt","to":"pdf"}"#);
+        assert!(result.is_ok());
+        let pdf = result.unwrap();
+        assert!(pdf.starts_with(b"%PDF-"));
+    }
+
+    #[test]
+    fn text_to_pdf_with_special_chars() {
+        // Parentheses and backslashes must be escaped in PDF string literals
+        let result = convert(
+            b"Price: (100) + (200) = (300) \\taxed",
+            r#"{"from":"txt","to":"pdf"}"#,
+        );
+        assert!(result.is_ok(), "special chars failed: {:?}", result.err());
+        let pdf = result.unwrap();
+        assert!(pdf.starts_with(b"%PDF-"));
+    }
+
+    #[test]
+    fn text_to_pdf_multipage() {
+        // ~60 lines per page; send 120 lines to force 2 pages
+        let long_text = (0..120)
+            .map(|i| format!("Line number {i}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let result = convert(long_text.as_bytes(), r#"{"from":"txt","to":"pdf"}"#).unwrap();
+        assert!(result.starts_with(b"%PDF-"));
+        // With multiple pages the PDF will be larger
+        assert!(result.len() > 1000);
+    }
+
+    #[test]
+    fn text_to_pdf_long_line_wraps() {
+        // A single line longer than CHARS_PER_LINE should still produce valid PDF
+        let long_line = "A".repeat(300);
+        let result = convert(long_line.as_bytes(), r#"{"from":"txt","to":"pdf"}"#);
+        assert!(result.is_ok());
+        assert!(result.unwrap().starts_with(b"%PDF-"));
+    }
+
+    // ── convert: PDF reading (pdf → text) ────────────
+
+    #[test]
+    fn pdf_text_roundtrip() {
+        // Generate a PDF from known text, then extract the text back out.
+        let original = b"Hello from Transfigure PDF roundtrip test";
+        let pdf = convert(original, r#"{"from":"txt","to":"pdf"}"#).unwrap();
+        let extracted = convert(&pdf, r#"{"from":"pdf","to":"txt"}"#);
+        assert!(extracted.is_ok(), "pdf→txt failed: {:?}", extracted.err());
+        let text = String::from_utf8(extracted.unwrap()).unwrap();
+        assert!(
+            text.contains("Hello from Transfigure"),
+            "extracted text should contain original content, got: {text:?}"
+        );
+    }
+
+    #[test]
+    fn pdf_to_html_contains_pre_tag() {
+        let pdf = convert(b"Sample text", r#"{"from":"txt","to":"pdf"}"#).unwrap();
+        let html_result = convert(&pdf, r#"{"from":"pdf","to":"html"}"#);
+        assert!(
+            html_result.is_ok(),
+            "pdf→html failed: {:?}",
+            html_result.err()
+        );
+        let html = String::from_utf8(html_result.unwrap()).unwrap();
+        assert!(html.contains("<pre>") || html.contains("<html>"));
+    }
+
+    #[test]
+    fn pdf_to_text_invalid_data() {
+        let result = convert(b"this is not a pdf", r#"{"from":"pdf","to":"txt"}"#);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            err.contains("Failed to load PDF"),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn pdf_to_html_invalid_data() {
+        let result = convert(b"\x00\x01\x02\x03", r#"{"from":"pdf","to":"html"}"#);
+        assert!(result.is_err());
+    }
+
+    // ── convert: Markdown → PDF ───────────────────────
+
+    #[test]
+    fn markdown_to_pdf_produces_valid_pdf() {
+        let md = b"# Title\n\nSome **bold** paragraph text.";
+        let result = convert(md, r#"{"from":"md","to":"pdf"}"#);
+        assert!(result.is_ok(), "md→pdf failed: {:?}", result.err());
+        let pdf = result.unwrap();
+        assert!(pdf.starts_with(b"%PDF-"));
+    }
+
+    #[test]
+    fn markdown_to_pdf_content_preserved() {
+        let md = b"Hello Markdown PDF content here";
+        let pdf = convert(md, r#"{"from":"md","to":"pdf"}"#).unwrap();
+        // Round-trip: extract text from the generated PDF
+        let text_result = convert(&pdf, r#"{"from":"pdf","to":"txt"}"#);
+        assert!(text_result.is_ok(), "{:?}", text_result.err());
+        let text = String::from_utf8(text_result.unwrap()).unwrap();
+        assert!(
+            text.contains("Hello Markdown PDF"),
+            "expected content in extracted text, got: {text:?}"
+        );
+    }
+
+    // ── convert: HTML → PDF ───────────────────────────
+
+    #[test]
+    fn html_to_pdf_produces_valid_pdf() {
+        let html = b"<h1>Title</h1><p>Hello world.</p>";
+        let result = convert(html, r#"{"from":"html","to":"pdf"}"#);
+        assert!(result.is_ok(), "html→pdf failed: {:?}", result.err());
+        let pdf = result.unwrap();
+        assert!(pdf.starts_with(b"%PDF-"));
+    }
+
+    #[test]
+    fn html_to_pdf_strips_tags() {
+        let html = b"<p>Stripped content here</p>";
+        let pdf = convert(html, r#"{"from":"html","to":"pdf"}"#).unwrap();
+        // After stripping, "Stripped content here" should still appear in the PDF
+        let text = convert(&pdf, r#"{"from":"pdf","to":"txt"}"#).unwrap();
+        let s = String::from_utf8(text).unwrap();
+        assert!(
+            s.contains("Stripped content"),
+            "HTML content should survive PDF roundtrip, got: {s:?}"
+        );
+    }
+
+    // ── csv / tsv edge cases ──────────────────────────
+
+    #[test]
+    fn csv_to_json_quoted_fields() {
+        let csv = b"name,note\n\"Smith, John\",\"has, commas\"";
+        let result = convert(csv, r#"{"from":"csv","to":"json"}"#).unwrap();
+        let json_str = String::from_utf8(result).unwrap();
+        let v: serde_json::Value = serde_json::from_str(&json_str).unwrap();
+        assert_eq!(v[0]["name"], "Smith, John");
+        assert_eq!(v[0]["note"], "has, commas");
+    }
+
+    #[test]
+    fn json_to_csv_missing_fields_empty() {
+        // Row 2 is missing "age" → that column should be empty string
+        let json = br#"[{"name":"Alice","age":30},{"name":"Bob"}]"#;
+        let result = convert(json, r#"{"from":"json","to":"csv"}"#).unwrap();
+        let s = String::from_utf8(result).unwrap();
+        assert!(s.contains("Bob"));
+        assert!(s.lines().count() >= 3); // header + 2 rows
+    }
+
+    #[test]
+    fn csv_single_row_no_data() {
+        // Header only, no data rows
+        let csv = b"col1,col2\n";
+        let result = convert(csv, r#"{"from":"csv","to":"json"}"#).unwrap();
+        let v: serde_json::Value =
+            serde_json::from_str(&String::from_utf8(result).unwrap()).unwrap();
+        assert!(v.as_array().unwrap().is_empty());
+    }
+
+    // ── yaml / toml round-trips ───────────────────────
+
+    #[test]
+    fn yaml_to_json_roundtrip_string_values() {
+        let yaml = b"city: Paris\ncountry: France";
+        let json = convert(yaml, r#"{"from":"yaml","to":"json"}"#).unwrap();
+        let v: serde_json::Value = serde_json::from_str(&String::from_utf8(json).unwrap()).unwrap();
+        assert_eq!(v["city"], "Paris");
+        assert_eq!(v["country"], "France");
+    }
+
+    #[test]
+    fn toml_to_json_section_table() {
+        let toml = b"[server]\nport = 8080\nhost = \"localhost\"";
+        let json = convert(toml, r#"{"from":"toml","to":"json"}"#).unwrap();
+        let v: serde_json::Value = serde_json::from_str(&String::from_utf8(json).unwrap()).unwrap();
+        assert_eq!(v["server"]["port"], 8080);
+        assert_eq!(v["server"]["host"], "localhost");
+    }
+
+    // ── markdown edge cases ───────────────────────────
+
+    #[test]
+    fn markdown_code_block_to_html() {
+        let md = b"```rust\nfn main() {}\n```";
+        let html = convert(md, r#"{"from":"md","to":"html"}"#).unwrap();
+        let s = String::from_utf8(html).unwrap();
+        assert!(s.contains("<code") || s.contains("main"));
+    }
+
+    #[test]
+    fn markdown_list_to_text() {
+        let md = b"- item one\n- item two\n- item three";
+        let text = convert(md, r#"{"from":"md","to":"txt"}"#).unwrap();
+        let s = String::from_utf8(text).unwrap();
+        assert!(s.contains("item one"));
+        assert!(s.contains("item two"));
+    }
+
+    #[test]
+    fn html_to_markdown_links() {
+        let html = b"<p>Visit <strong>here</strong></p>";
+        let md = convert(html, r#"{"from":"html","to":"md"}"#).unwrap();
+        let s = String::from_utf8(md).unwrap();
+        assert!(s.contains("here"));
+        assert!(s.contains("**"));
     }
 }
