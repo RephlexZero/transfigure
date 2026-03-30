@@ -1,5 +1,6 @@
 {
   "private": true,
+  "license": "AGPL-3.0-only",
   "scripts": {
     "css:build": "npx tailwindcss -i ./input.css -o ./crates/app/tailwind.css --minify",
     "css:watch": "npx tailwindcss -i ./input.css -o ./crates/app/tailwind.css --watch"
