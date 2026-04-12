@@ -4,8 +4,7 @@ use base64::Engine;
 
 /// Extract plain text from a PDF file using lopdf.
 pub fn pdf_to_text(input: &[u8]) -> Result<Vec<u8>, String> {
-    let doc = lopdf::Document::load_mem(input)
-        .map_err(|e| format!("Failed to load PDF: {e}"))?;
+    let doc = lopdf::Document::load_mem(input).map_err(|e| format!("Failed to load PDF: {e}"))?;
 
     let page_nums: Vec<u32> = {
         let mut nums: Vec<u32> = doc.get_pages().keys().cloned().collect();
@@ -158,9 +157,7 @@ fn build_text_pdf(text: &str) -> Vec<u8> {
         for (j, line) in lines.iter().enumerate() {
             let esc = pdf_escape_string(line);
             if j == 0 {
-                stream.push_str(&format!(
-                    "{MARGIN_X:.3} {start_y:.3} Td\n({esc}) Tj\n"
-                ));
+                stream.push_str(&format!("{MARGIN_X:.3} {start_y:.3} Td\n({esc}) Tj\n"));
             } else {
                 stream.push_str(&format!("0 -{LINE_HEIGHT:.3} Td\n({esc}) Tj\n"));
             }
@@ -195,10 +192,8 @@ fn build_text_pdf(text: &str) -> Vec<u8> {
 
     // ── Trailer ───────────────────────────────────────
     pdf.extend_from_slice(
-        format!(
-            "trailer\n<< /Size {xref_size} /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF\n"
-        )
-        .as_bytes(),
+        format!("trailer\n<< /Size {xref_size} /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF\n")
+            .as_bytes(),
     );
 
     pdf
@@ -214,7 +209,7 @@ fn pdf_escape_string(s: &str) -> String {
             '\\' => out.push_str("\\\\"),
             '\r' => out.push_str("\\r"),
             '\n' => out.push_str("\\n"),
-            c if (c as u32) < 32 => {} // skip control characters
+            c if (c as u32) < 32 => {}  // skip control characters
             c if (c as u32) > 255 => {} // skip non-Latin-1 for WinAnsiEncoding
             c => out.push(c),
         }

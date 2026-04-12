@@ -5,6 +5,12 @@
 @layer base {
   * {
     @apply scroll-smooth;
+    border-radius: 0 !important;
+  }
+
+  *::before,
+  *::after {
+    border-radius: 0 !important;
   }
 
   ::selection {
@@ -16,6 +22,18 @@
   /* Gradient text effect */
   .gradient-text {
     @apply bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent;
+  }
+
+  .panel-shell {
+    @apply glass-card border-2 border-white/10 p-6 sm:p-8;
+  }
+
+  .panel-row {
+    @apply min-h-[88px] p-3 sm:p-4 border border-white/10;
+  }
+
+  .brutal-chip {
+    @apply px-3 py-1.5 text-xs font-bold uppercase tracking-wider border;
   }
 
   /* Glass card with subtle border */

@@ -200,8 +200,8 @@ pub fn ConverterSection(
     };
 
     view! {
-        <section id="converter" class="max-w-3xl mx-auto mb-24">
-            <div class="glass-card rounded-2xl p-6 sm:p-8">
+        <section id="converter" class="pt-10 pb-8 sm:pt-14 sm:pb-10 h-full">
+            <div class="panel-shell h-full flex flex-col">
                 <DropZone dragging=dragging add_files=add_files has_files=has_files/>
 
                 {move || {
@@ -211,7 +211,7 @@ pub fn ConverterSection(
                     } else {
                         let is_conv = is_converting.get();
                         view! {
-                            <div class="mt-6 space-y-3">
+                            <div class="mt-6 flex-1 min-h-0 flex flex-col">
                                 <div class="flex items-center justify-between mb-2">
                                     <span class="text-sm text-base-content/50 font-medium">
                                         {file_list.len()} " file" {if file_list.len() != 1 { "s" } else { "" }}
@@ -222,20 +222,22 @@ pub fn ConverterSection(
                                     >"Clear all"</button>
                                 </div>
 
-                                <For
-                                    each=move || files.get()
-                                    key=|f| f.id
-                                    let:file
-                                >
-                                    <FileRow
-                                        file=file.clone()
-                                        on_remove=remove_file
-                                        on_set_target=set_target
-                                        on_save=save_file
-                                    />
-                                </For>
+                                <div class="space-y-3 flex-1 min-h-0 overflow-y-auto pr-1">
+                                    <For
+                                        each=move || files.get()
+                                        key=|f| f.id
+                                        let:file
+                                    >
+                                        <FileRow
+                                            file=file.clone()
+                                            on_remove=remove_file
+                                            on_set_target=set_target
+                                            on_save=save_file
+                                        />
+                                    </For>
+                                </div>
 
-                                <div class="flex flex-col sm:flex-row gap-3 pt-4 border-t border-white/5">
+                                <div class="flex flex-col sm:flex-row gap-3 pt-4 mt-4 border-t border-white/5">
                                     {move || {
                                         if all_done.get() {
                                             view! {
@@ -304,7 +306,7 @@ fn FileRow(
 
     view! {
         <div class=move || {
-            let base = "flex flex-col gap-2 p-3 rounded-xl border transition-all duration-200";
+            let base = "flex flex-col gap-2 panel-row transition-all duration-200";
             if is_done {
                 format!("{base} bg-success/5 border-success/20")
             } else if is_error {
@@ -421,15 +423,15 @@ fn SaveAllDropdown(
     };
 
     view! {
-        <div class="dropdown dropdown-top flex-1">
-            <div tabindex="0" role="button" class="btn btn-success btn-lg w-full gap-2">
-                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <div class="dropdown dropdown-top flex-1 w-full">
+            <div tabindex="0" role="button" class="btn btn-success w-full gap-2 text-sm sm:text-base">
+                <svg class="w-5 h-5 hidden sm:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                     <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
                     <polyline points="17 21 17 13 7 13 7 21"/>
                     <polyline points="7 3 7 8 15 8"/>
                 </svg>
-                "Save all " {move || done_count.get()} " files"
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                "Save " {move || done_count.get()} " files"
+                <svg class="w-4 h-4 ml-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                     <polyline points="18 15 12 9 6 15"/>
                 </svg>
             </div>

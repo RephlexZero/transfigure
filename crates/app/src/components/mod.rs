@@ -9,7 +9,7 @@ use crate::types::BatchFile;
 use converter::ConverterSection;
 use header::Header;
 use hero::Hero;
-use info::{Footer, Formats, HowItWorks, PrivacyBanner, SupportBanner};
+use info::{Footer, HowItWorks, SupportBanner};
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -29,11 +29,18 @@ pub fn App() -> impl IntoView {
                 <Header/>
 
                 <main class="container mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-                    <Hero/>
-                    <ConverterSection files=files next_id=next_id/>
+                    <section class="grid grid-cols-1 xl:grid-cols-12 gap-8 items-stretch">
+                        <div class="xl:col-span-7 h-full">
+                            <Hero/>
+                        </div>
+                        <div class="xl:col-span-5 relative h-full w-full">
+                            <div class="xl:absolute xl:inset-0 w-full h-full">
+                                <ConverterSection files=files next_id=next_id/>
+                            </div>
+                        </div>
+                    </section>
+
                     <HowItWorks/>
-                    <Formats/>
-                    <PrivacyBanner/>
                     <SupportBanner/>
                 </main>
 
