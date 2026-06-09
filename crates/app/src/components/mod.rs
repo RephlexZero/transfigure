@@ -17,12 +17,9 @@ pub fn App() -> impl IntoView {
     let next_id = RwSignal::new(0usize);
 
     view! {
-        <div class="min-h-screen bg-base-300 relative overflow-hidden">
-            <div class="pointer-events-none fixed inset-0 z-0">
-                <div class="orb orb-1"></div>
-                <div class="orb orb-2"></div>
-                <div class="orb orb-3"></div>
-                <div class="noise"></div>
+        <div class="min-h-screen bg-base-300 relative">
+            <div class="pointer-events-none fixed inset-0 z-0 blueprint-grid">
+                <div class="absolute inset-0 grid-vignette"></div>
             </div>
 
             <div class="relative z-10">

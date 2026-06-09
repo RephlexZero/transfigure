@@ -6,17 +6,33 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        mono: [
+          "ui-monospace",
+          "SFMono-Regular",
+          "Menlo",
+          "Consolas",
+          "Liberation Mono",
+          "monospace",
+        ],
+      },
       animation: {
-        'float-slow': 'float 25s ease-in-out infinite',
-        'float-slower': 'float 35s ease-in-out infinite reverse',
-        'float-slowest': 'float 45s ease-in-out infinite',
+        'stamp-in': 'stamp-in 0.25s cubic-bezier(0.2, 1.4, 0.4, 1) both',
+        'row-in': 'row-in 0.3s ease-out both',
+        'pulse-soft': 'pulse-soft 1.2s ease-in-out infinite',
       },
       keyframes: {
-        float: {
-          '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
-          '25%': { transform: 'translate(60px, 60px) scale(1.1)' },
-          '50%': { transform: 'translate(-40px, 80px) scale(0.95)' },
-          '75%': { transform: 'translate(80px, -40px) scale(1.05)' },
+        'stamp-in': {
+          '0%': { transform: 'scale(1.6) rotate(-6deg)', opacity: '0' },
+          '100%': { transform: 'scale(1) rotate(0deg)', opacity: '1' },
+        },
+        'row-in': {
+          '0%': { transform: 'translateY(4px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        'pulse-soft': {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.35' },
         },
       },
     },
@@ -26,17 +42,22 @@ module.exports = {
     themes: [
       {
         transfigure: {
-          "primary": "#a78bfa",
-          "secondary": "#818cf8",
-          "accent": "#22d3ee",
-          "neutral": "#1e1b2e",
-          "base-100": "#13111c",
-          "base-200": "#0d0b16",
-          "base-300": "#080710",
-          "info": "#38bdf8",
-          "success": "#4ade80",
-          "warning": "#fbbf24",
-          "error": "#f87171",
+          "primary": "#d9a441",
+          "primary-content": "#16130a",
+          "secondary": "#6fae8f",
+          "secondary-content": "#0f1411",
+          "accent": "#c96342",
+          "accent-content": "#160e0a",
+          "neutral": "#1a1712",
+          "neutral-content": "#e6dfd0",
+          "base-100": "#16140f",
+          "base-200": "#100e0a",
+          "base-300": "#0b0a07",
+          "base-content": "#e6dfd0",
+          "info": "#7ba6c9",
+          "success": "#6fae8f",
+          "warning": "#d9a441",
+          "error": "#cf6b57",
         },
       },
     ],

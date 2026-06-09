@@ -1,19 +1,6 @@
 use wasm_bindgen::JsCast;
 use web_sys::js_sys;
 
-pub fn format_icon(ext: &str) -> &'static str {
-    match ext {
-        "png" | "jpg" | "jpeg" | "gif" | "webp" | "bmp" | "tiff" | "tif" | "svg" | "avif"
-        | "ico" | "qoi" | "tga" | "hdr" | "dds" | "exr" => "🖼️",
-        "md" | "markdown" | "html" | "txt" | "text" => "📝",
-        "docx" | "rtf" | "pdf" => "📄",
-        "csv" | "tsv" | "json" => "📊",
-        "yaml" | "yml" | "toml" => "⚙️",
-        "base64" => "🔐",
-        _ => "📄",
-    }
-}
-
 pub fn format_size(bytes: usize) -> String {
     if bytes < 1024 {
         format!("{bytes} B")
@@ -21,6 +8,29 @@ pub fn format_size(bytes: usize) -> String {
         format!("{:.1} KB", bytes as f64 / 1024.0)
     } else {
         format!("{:.1} MB", bytes as f64 / (1024.0 * 1024.0))
+    }
+}
+
+/// Relative size change between input and output, e.g. "-42%" or "+8%".
+/// Returns None when the change rounds to zero or the input is empty.
+pub fn format_size_delta(input: usize, output: usize) -> Option<String> {
+    if input == 0 {
+        return None;
+    }
+    let pct = ((output as f64 - input as f64) / input as f64 * 100.0).round() as i64;
+    match pct {
+        0 => None,
+        p if p > 0 => Some(format!("+{p}%")),
+        p => Some(format!("{p}%")),
+    }
+}
+
+/// Conversion duration for display, e.g. "12 ms" or "1.3 s".
+pub fn format_elapsed(ms: u32) -> String {
+    if ms < 1000 {
+        format!("{ms} ms")
+    } else {
+        format!("{:.1} s", ms as f64 / 1000.0)
     }
 }
 
@@ -90,41 +100,23 @@ pub fn download_blob_raw(data: &[u8], filename: &str, mime: &str) {
     web_sys::Url::revoke_object_url(&url).unwrap();
 }
 
+/// Yield to the browser's event loop via setTimeout(0) so pending paints run.
+/// A resolved-Promise microtask is NOT enough: the renderer never gets a
+/// chance to repaint between microtasks, which freezes status updates while
+/// a batch is converting.
+pub async fn next_tick() {
+    let promise = js_sys::Promise::new(&mut |resolve, _reject| {
+        web_sys::window()
+            .unwrap()
+            .set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, 0)
+            .unwrap();
+    });
+    let _ = wasm_bindgen_futures::JsFuture::from(promise).await;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // ── format_icon ─────────────────────────────────
-
-    #[test]
-    fn format_icon_images() {
-        assert_eq!(format_icon("png"), "🖼️");
-        assert_eq!(format_icon("jpg"), "🖼️");
-        assert_eq!(format_icon("svg"), "🖼️");
-    }
-
-    #[test]
-    fn format_icon_documents() {
-        assert_eq!(format_icon("md"), "📝");
-        assert_eq!(format_icon("html"), "📝");
-    }
-
-    #[test]
-    fn format_icon_data() {
-        assert_eq!(format_icon("csv"), "📊");
-        assert_eq!(format_icon("json"), "📊");
-    }
-
-    #[test]
-    fn format_icon_config() {
-        assert_eq!(format_icon("yaml"), "⚙️");
-        assert_eq!(format_icon("toml"), "⚙️");
-    }
-
-    #[test]
-    fn format_icon_unknown() {
-        assert_eq!(format_icon("xyz"), "📄");
-    }
 
     // ── format_size ─────────────────────────────────
 
@@ -145,6 +137,43 @@ mod tests {
     fn format_size_megabytes() {
         assert_eq!(format_size(1024 * 1024), "1.0 MB");
         assert_eq!(format_size(2 * 1024 * 1024 + 512 * 1024), "2.5 MB");
+    }
+
+    // ── format_size_delta ───────────────────────────
+
+    #[test]
+    fn size_delta_smaller() {
+        assert_eq!(format_size_delta(1000, 580), Some("-42%".into()));
+    }
+
+    #[test]
+    fn size_delta_larger() {
+        assert_eq!(format_size_delta(1000, 1080), Some("+8%".into()));
+    }
+
+    #[test]
+    fn size_delta_unchanged() {
+        assert_eq!(format_size_delta(1000, 1000), None);
+        assert_eq!(format_size_delta(1000, 1001), None); // rounds to 0
+    }
+
+    #[test]
+    fn size_delta_empty_input() {
+        assert_eq!(format_size_delta(0, 500), None);
+    }
+
+    // ── format_elapsed ──────────────────────────────
+
+    #[test]
+    fn elapsed_millis() {
+        assert_eq!(format_elapsed(0), "0 ms");
+        assert_eq!(format_elapsed(999), "999 ms");
+    }
+
+    #[test]
+    fn elapsed_seconds() {
+        assert_eq!(format_elapsed(1000), "1.0 s");
+        assert_eq!(format_elapsed(2350), "2.4 s");
     }
 
     // ── mime_type_for ───────────────────────────────

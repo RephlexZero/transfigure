@@ -186,8 +186,8 @@ fn build_text_pdf(text: &str) -> Vec<u8> {
     let xref_size = total_objs + 1; // entries 0..=total_objs
     pdf.extend_from_slice(format!("xref\n0 {xref_size}\n").as_bytes());
     pdf.extend_from_slice(b"0000000000 65535 f\r\n"); // free entry for object 0
-    for n in 1..=total_objs {
-        pdf.extend_from_slice(format!("{:010} 00000 n\r\n", offsets[n]).as_bytes());
+    for offset in offsets.iter().take(total_objs + 1).skip(1) {
+        pdf.extend_from_slice(format!("{offset:010} 00000 n\r\n").as_bytes());
     }
 
     // ── Trailer ───────────────────────────────────────
