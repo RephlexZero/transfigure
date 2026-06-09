@@ -63,9 +63,10 @@ Batch conversion is supported — drop multiple files at once and convert them a
 ```
 transfigure/
 ├── crates/
-│   ├── app/            # Leptos frontend (compiled to WASM)
-│   │   ├── src/main.rs # All UI components
-│   │   └── index.html  # Entry point for Trunk
+│   ├── app/                # Leptos frontend (compiled to WASM)
+│   │   ├── src/components/ # UI components (header, hero, converter, info)
+│   │   ├── src/utils.rs    # Download/format helpers
+│   │   └── index.html      # Entry point for Trunk
 │   └── converter/      # Conversion engine (no WASM dependencies)
 │       └── src/
 │           ├── lib.rs          # Public API: convert(), get_output_formats()

@@ -3278,6 +3278,7 @@ dependencies = [
  "getrandom 0.3.4",
  "js-sys",
  "leptos",
+ "serde_json",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",

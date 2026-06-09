@@ -2,8 +2,14 @@
 pub enum FileStatus {
     Pending,
     Converting,
-    Done(Vec<u8>),
+    Done { data: Vec<u8>, elapsed_ms: u32 },
     Error(String),
+}
+
+impl FileStatus {
+    pub fn is_finished(&self) -> bool {
+        matches!(self, FileStatus::Done { .. } | FileStatus::Error(_))
+    }
 }
 
 #[derive(Clone)]

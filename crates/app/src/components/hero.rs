@@ -3,45 +3,46 @@ use leptos::prelude::*;
 #[component]
 pub fn Hero() -> impl IntoView {
     view! {
-        <section class="pt-10 pb-8 sm:pt-14 sm:pb-10 font-mono h-full">
-            <div class="panel-shell border-primary/35 shadow-[8px_8px_0px_0px_rgba(167,139,250,0.3)] relative h-full">
-
-                <div class="text-xs text-secondary/80 mb-7 uppercase tracking-widest flex items-center border-b-2 border-primary/20 pb-2">
-                    <span class="flex items-center gap-2">
-                        <span class="w-2 h-2 bg-accent inline-block"></span>
-                        "Private conversion in your browser"
+        <section class="pt-10 pb-8 sm:pt-14 sm:pb-10 h-full">
+            <div class="plate h-full flex flex-col">
+                <div class="flex items-center justify-between mb-6 pb-3 border-b hairline">
+                    <span class="section-tag">"§ 00 · Transfigure"</span>
+                    <span class="text-[10px] uppercase tracking-[0.2em] text-base-content/35">
+                        "Rust → WASM"
                     </span>
                 </div>
 
-                <h1 class="text-4xl sm:text-6xl lg:text-7xl font-black uppercase tracking-tight mb-8 leading-none text-base-content selection:bg-accent selection:text-base-100">
-                    "Convert files"
-                    <br />
-                    <span class="gradient-text">"without sending them anywhere."</span>
+                <h1 class="text-4xl sm:text-6xl lg:text-[4.25rem] font-black uppercase leading-[0.95] tracking-tight mb-8">
+                    "Convert files."
+                    <br/>
+                    <span class="text-primary">"Upload nothing."</span>
                 </h1>
 
-                <p class="text-lg sm:text-xl text-base-content/80 max-w-2xl mb-8 leading-relaxed border-l-4 border-accent pl-4 normal-case">
-                    "Transfigure runs on your device using Rust and WebAssembly, so conversion happens locally from start to finish."
-                    <br />
-                    <span class="font-bold text-accent">"No uploads. No account. No file retention."</span>
+                <p class="text-base sm:text-lg text-base-content/70 max-w-xl leading-relaxed mb-8">
+                    "Every conversion happens inside this page — a Rust engine compiled to "
+                    "WebAssembly, running on your machine. There is no server to receive your "
+                    "files; you can watch the network tab and see nothing leave."
                 </p>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm font-medium pt-2">
-                    <div class="panel-row bg-black/20 flex items-start gap-3 hover:border-accent/40 transition-colors">
-                        <span class="text-accent mt-0.5">"//"</span>
-                        <div class="text-base-content/70 uppercase">
-                            <span class="block text-base-content mb-1">"Privacy first"</span>
-                            "Processing stays in browser memory."
-                        </div>
-                    </div>
-                    <div class="panel-row bg-black/20 flex items-start gap-3 hover:border-secondary/40 transition-colors">
-                        <span class="text-secondary mt-0.5">"//"</span>
-                        <div class="text-base-content/70 uppercase">
-                            <span class="block text-base-content mb-1">"Fast by default"</span>
-                            "Rust + WASM, running on your CPU."
-                        </div>
-                    </div>
+                // Spec sheet: how the instrument is built.
+                <div class="mt-auto border-t-2 hairline divide-y divide-base-content/10 text-sm">
+                    <SpecRow label="Engine" value="Pure Rust, compiled to WebAssembly"/>
+                    <SpecRow label="Network" value="Zero bytes leave the device"/>
+                    <SpecRow label="Account" value="None. No limits, no tracking"/>
+                    <SpecRow label="Offline" value="Works after first load"/>
+                    <SpecRow label="Source" value="Open · AGPL-3.0"/>
                 </div>
             </div>
         </section>
+    }
+}
+
+#[component]
+fn SpecRow(label: &'static str, value: &'static str) -> impl IntoView {
+    view! {
+        <div class="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-3 py-2.5">
+            <span class="text-[10px] uppercase tracking-[0.25em] text-primary/80 font-bold pt-0.5">{label}</span>
+            <span class="text-base-content/75">{value}</span>
+        </div>
     }
 }

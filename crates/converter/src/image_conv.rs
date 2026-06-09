@@ -28,10 +28,19 @@ pub fn convert_image(
 
     match out_format {
         ImageFormat::Jpeg => {
-            let q = quality.unwrap_or(85);
+            let q = quality.unwrap_or(85).clamp(1, 100);
             let encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut cursor, q);
             img.write_with_encoder(encoder)
                 .map_err(|e| format!("Failed to encode JPEG: {e}"))?;
+        }
+        ImageFormat::Avif => {
+            let q = quality.unwrap_or(80).clamp(1, 100);
+            // Speed 6 trades a little compression for much faster encodes,
+            // which matters when running single-threaded in the browser.
+            let encoder =
+                image::codecs::avif::AvifEncoder::new_with_speed_quality(&mut cursor, 6, q);
+            img.write_with_encoder(encoder)
+                .map_err(|e| format!("Failed to encode AVIF: {e}"))?;
         }
         _ => {
             img.write_to(&mut cursor, out_format)

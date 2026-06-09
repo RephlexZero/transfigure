@@ -13,79 +13,174 @@
     border-radius: 0 !important;
   }
 
+  html {
+    @apply font-mono;
+  }
+
   ::selection {
-    @apply bg-primary/30 text-primary-content;
+    @apply bg-primary text-primary-content;
   }
 }
 
 @layer components {
-  /* Gradient text effect */
-  .gradient-text {
-    @apply bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent;
+  /* ── Page furniture ──────────────────────────────── */
+
+  /* Drafting-table grid: faint ruled lines on the page background. */
+  .blueprint-grid {
+    background-image:
+      linear-gradient(rgba(230, 223, 208, 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(230, 223, 208, 0.035) 1px, transparent 1px);
+    background-size: 48px 48px;
   }
 
-  .panel-shell {
-    @apply glass-card border-2 border-white/10 p-6 sm:p-8;
-  }
-
-  .panel-row {
-    @apply min-h-[88px] p-3 sm:p-4 border border-white/10;
-  }
-
-  .brutal-chip {
-    @apply px-3 py-1.5 text-xs font-bold uppercase tracking-wider border;
-  }
-
-  /* Glass card with subtle border */
-  .glass-card {
-    @apply bg-white/[0.03] backdrop-blur-xl border border-white/[0.06];
-    box-shadow:
-      0 0 0 1px rgba(255, 255, 255, 0.02) inset,
-      0 4px 40px rgba(0, 0, 0, 0.3);
-  }
-
-  .glass-card:hover {
-    @apply border-white/[0.1];
-  }
-
-  /* Animated background orbs */
-  .orb {
-    @apply absolute rounded-full opacity-20;
-    filter: blur(100px);
-  }
-
-  .orb-1 {
-    @apply w-[500px] h-[500px] -top-40 -left-40 animate-float-slow;
+  /* Vignette so the grid fades toward the edges. */
+  .grid-vignette {
     background: radial-gradient(
-      circle,
-      theme("colors.primary"),
-      transparent 70%
+      ellipse 80% 60% at 50% 0%,
+      transparent 0%,
+      rgba(11, 10, 7, 0.85) 100%
     );
   }
 
-  .orb-2 {
-    @apply w-[400px] h-[400px] -bottom-32 -right-32 animate-float-slower;
-    background: radial-gradient(
-      circle,
-      theme("colors.accent"),
-      transparent 70%
-    );
+  .hairline {
+    @apply border-base-content/15;
   }
 
-  .orb-3 {
-    @apply w-[350px] h-[350px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-float-slowest;
-    background: radial-gradient(
-      circle,
-      theme("colors.secondary"),
-      transparent 70%
-    );
+  /* Section heading: small caps with a leading index, e.g. "§ 02 · FORMATS" */
+  .section-tag {
+    @apply text-xs font-bold uppercase tracking-[0.3em] text-primary;
   }
 
-  /* Noise overlay for texture */
-  .noise {
-    @apply fixed inset-0 pointer-events-none opacity-[0.015];
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
-    background-repeat: repeat;
-    background-size: 256px;
+  /* ── Panels ──────────────────────────────────────── */
+
+  /* A panel framed like a plate in a technical manual: solid border,
+     registration ticks drawn in the corners via pseudo-elements. */
+  .plate {
+    @apply relative border hairline bg-base-200/80 p-6 sm:p-8;
   }
+
+  .plate::before,
+  .plate::after {
+    content: "";
+    @apply absolute w-3 h-3 pointer-events-none;
+  }
+
+  .plate::before {
+    @apply -top-px -left-px border-t-2 border-l-2 border-primary/70;
+  }
+
+  .plate::after {
+    @apply -bottom-px -right-px border-b-2 border-r-2 border-primary/70;
+  }
+
+  /* ── Ledger (file list) ──────────────────────────── */
+
+  .ledger-row {
+    @apply grid items-center gap-x-3 gap-y-2 px-3 py-2.5 border-b hairline animate-row-in;
+    grid-template-columns: 2rem 3.25rem minmax(0, 1fr);
+  }
+
+  /* On narrow screens the controls drop to a second line, full width. */
+  .ledger-controls {
+    @apply col-span-full flex items-center gap-2 justify-end;
+  }
+
+  @media (min-width: 640px) {
+    .ledger-row {
+      grid-template-columns: 2rem 3.25rem minmax(0, 1fr) auto;
+    }
+
+    .ledger-controls {
+      grid-column: auto;
+    }
+  }
+
+  .ledger-index {
+    @apply text-xs text-base-content/35 tabular-nums;
+  }
+
+  /* Extension cell: bordered glyph chip instead of an emoji. */
+  .ext-chip {
+    @apply inline-flex items-center justify-center w-[3.25rem] py-1 text-[10px]
+      font-bold uppercase tracking-wider border border-base-content/30
+      text-base-content/80 bg-base-100;
+  }
+
+  /* ── Stamps (status) ─────────────────────────────── */
+
+  .stamp {
+    @apply inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-bold
+      uppercase tracking-[0.15em] border;
+  }
+
+  .stamp-idle {
+    @apply border-base-content/25 text-base-content/45;
+  }
+
+  .stamp-busy {
+    @apply border-primary/60 text-primary animate-pulse-soft;
+  }
+
+  .stamp-done {
+    @apply border-secondary/70 text-secondary animate-stamp-in;
+  }
+
+  .stamp-error {
+    @apply border-error/70 text-error animate-stamp-in;
+  }
+
+  /* ── Controls ────────────────────────────────────── */
+
+  /* Square uppercase buttons that match the ledger aesthetic. */
+  .btn {
+    @apply uppercase tracking-[0.12em] font-bold;
+  }
+
+  .select {
+    @apply uppercase tracking-wide font-bold;
+  }
+
+  /* Range input styled as a thin rule with a square gold thumb. */
+  .quality-range {
+    @apply w-full h-px appearance-none bg-base-content/25 cursor-pointer;
+  }
+
+  .quality-range::-webkit-slider-thumb {
+    @apply appearance-none w-3 h-3 bg-primary border border-primary-content;
+  }
+
+  .quality-range::-moz-range-thumb {
+    @apply w-3 h-3 bg-primary border border-primary-content;
+  }
+
+  /* ── Drop zone ───────────────────────────────────── */
+
+  .drop-slab {
+    @apply relative border-2 border-base-content/20 cursor-pointer
+      transition-colors duration-200 bg-base-100/40;
+  }
+
+  .drop-slab:hover {
+    @apply border-primary/50;
+  }
+
+  .drop-slab-active {
+    @apply border-primary bg-primary/10;
+  }
+
+  /* Crosshair in each corner of the drop slab. */
+  .drop-slab .corner {
+    @apply absolute w-2.5 h-2.5 border-primary/60 pointer-events-none
+      transition-all duration-200;
+  }
+
+  .drop-slab:hover .corner,
+  .drop-slab-active .corner {
+    @apply border-primary;
+  }
+
+  .corner-tl { @apply top-1.5 left-1.5 border-t border-l; }
+  .corner-tr { @apply top-1.5 right-1.5 border-t border-r; }
+  .corner-bl { @apply bottom-1.5 left-1.5 border-b border-l; }
+  .corner-br { @apply bottom-1.5 right-1.5 border-b border-r; }
 }
