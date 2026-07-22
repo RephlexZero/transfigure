@@ -1,0 +1,32 @@
+# Transfigure
+
+> Free, private file converter that runs entirely in the browser via Rust
+> compiled to WebAssembly. No uploads, no accounts, no tracking, no server —
+> files never leave the user's device. Free forever, open source (AGPL-3.0).
+
+Transfigure is a single-page web app (https://transfigure.ing). There is no
+API and no backend: all conversion happens client-side in WebAssembly, so
+there is nothing to call or crawl beyond the page itself.
+
+## Key facts
+
+- Every conversion runs locally in the browser; no network request carries
+  file data anywhere.
+- No account, sign-up, usage limits, or telemetry.
+- Works offline after the first page load (WASM binary is cached).
+- Source available under AGPL-3.0-only: https://github.com/RephlexZero/transfigure
+
+## Supported conversions
+
+- Images: PNG, JPG, WebP, GIF, BMP, TIFF, AVIF, QOI, TGA, HDR, DDS, EXR, ICO, SVG → PNG
+- Audio: MP3, FLAC, OGG, WAV → WAV
+- Documents: Markdown ↔ HTML, MD/HTML/TXT → PDF, PDF → TXT/HTML, DOCX → TXT/HTML, RTF → TXT
+- Data: CSV ↔ JSON, CSV ↔ TSV
+- Config: JSON ↔ YAML, JSON ↔ TOML
+- Encoding: Base64 ↔ Binary
+- Batch output: ZIP, TAR.GZ, TAR.XZ, 7Z
+
+## Docs
+
+- [Homepage](https://transfigure.ing): the converter itself
+- [README](https://github.com/RephlexZero/transfigure/blob/main/README.md): tech stack, build/dev instructions, architecture

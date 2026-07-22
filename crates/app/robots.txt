@@ -1,4 +1,31 @@
+# All crawlers welcome — this site has no user data, uploads, or paywalled
+# content to protect. Everything here is meant to be read and indexed.
 User-agent: *
+Allow: /
+
+# AI assistants / answer engines
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: CCBot
 Allow: /
 
 Sitemap: https://transfigure.ing/sitemap.xml
