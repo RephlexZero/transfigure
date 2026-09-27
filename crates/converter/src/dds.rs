@@ -79,12 +79,14 @@ pub fn decode(input: &[u8]) -> Result<DynamicImage, String> {
             .ok_or("DDS data is truncated")?
             .to_vec();
         if swap {
-            for px in rgba.chunks_exact_mut(4) {
+            for px in rgba.as_chunks_mut::<4>().0 {
                 px.swap(0, 2);
             }
         }
         if f == DxgiFormat::B8G8R8X8_UNorm {
-            rgba.chunks_exact_mut(4).for_each(|p| p[3] = 255);
+            for p in rgba.as_chunks_mut::<4>().0 {
+                p[3] = 255;
+            }
         }
         return RgbaImage::from_raw(w as u32, h as u32, rgba)
             .map(DynamicImage::ImageRgba8)
@@ -132,18 +134,23 @@ fn decode_blocks(data: &[u8], w: usize, h: usize, bc: Bc) -> Result<DynamicImage
             Bc::Bc4(signed) => {
                 let mut r = [0u8; 16];
                 bcdec_rs::bc4(src, &mut r, 4, signed);
-                for (p, v) in block.chunks_exact_mut(4).zip(r) {
-                    p.copy_from_slice(&[v, v, v, 255]);
+                for (p, v) in block.as_chunks_mut::<4>().0.iter_mut().zip(r) {
+                    *p = [v, v, v, 255];
                 }
             }
             Bc::Bc5(signed) => {
                 // Usually a normal map: reconstruct Z so it previews sensibly.
                 let mut rg = [0u8; 32];
                 bcdec_rs::bc5(src, &mut rg, 8, signed);
-                for (p, v) in block.chunks_exact_mut(4).zip(rg.chunks_exact(2)) {
+                for (p, v) in block
+                    .as_chunks_mut::<4>()
+                    .0
+                    .iter_mut()
+                    .zip(rg.as_chunks::<2>().0)
+                {
                     let (x, y) = (v[0] as f32 / 127.5 - 1.0, v[1] as f32 / 127.5 - 1.0);
                     let z = (1.0 - x * x - y * y).max(0.0).sqrt();
-                    p.copy_from_slice(&[v[0], v[1], ((z + 1.0) * 127.5) as u8, 255]);
+                    *p = [v[0], v[1], ((z + 1.0) * 127.5) as u8, 255];
                 }
             }
             Bc::Bc6(_) => unreachable!("handled above"),

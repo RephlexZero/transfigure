@@ -91,7 +91,7 @@ pub fn read(input: &[u8], from: &str) -> Result<Rows, String> {
 fn sniff_delimiter(text: &str) -> u8 {
     let first = text.lines().next().unwrap_or("");
     let mut counts = [0usize; 4];
-    let cands = [b',', b';', b'\t', b'|'];
+    let cands = *b",;\t|";
     let mut quoted = false;
     for b in first.bytes() {
         if b == b'"' {
