@@ -1,6 +1,7 @@
 mod converter;
 mod header;
 mod hero;
+mod icons;
 mod info;
 
 use leptos::prelude::*;
@@ -8,8 +9,8 @@ use leptos::prelude::*;
 use crate::types::BatchFile;
 use converter::ConverterSection;
 use header::Header;
-use hero::Hero;
-use info::{Footer, HowItWorks, SupportBanner};
+use hero::{Hero, TrustRow};
+use info::{Faq, Footer, Formats, HowItWorks, SupportBanner};
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -17,32 +18,31 @@ pub fn App() -> impl IntoView {
     let next_id = RwSignal::new(0usize);
 
     view! {
-        <div class="min-h-screen bg-base-300 relative">
-            <div class="pointer-events-none fixed inset-0 z-0 blueprint-grid">
-                <div class="absolute inset-0 grid-vignette"></div>
-            </div>
+        <div class="relative min-h-screen flex flex-col overflow-x-clip">
+            // Soft warm light behind the converter; purely decorative.
+            <div
+                class="pointer-events-none absolute inset-x-0 top-0 h-[40rem] -z-0 bg-[radial-gradient(60%_50%_at_50%_0%,rgb(var(--accent)/0.10),transparent_70%)]"
+                aria-hidden="true"
+            ></div>
 
-            <div class="relative z-10">
-                <Header/>
+            <Header/>
 
-                <main class="container mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-                    <section class="grid grid-cols-1 xl:grid-cols-12 gap-8 items-stretch">
-                        <div class="xl:col-span-7 h-full">
-                            <Hero/>
-                        </div>
-                        <div class="xl:col-span-5 relative h-full w-full">
-                            <div class="xl:absolute xl:inset-0 w-full h-full">
-                                <ConverterSection files=files next_id=next_id/>
-                            </div>
-                        </div>
-                    </section>
+            <main class="relative flex-1">
+                <section class="px-4 sm:px-6 pt-10 sm:pt-16 pb-16 sm:pb-24">
+                    <Hero/>
+                    <div class="mx-auto max-w-3xl mt-8 sm:mt-12">
+                        <ConverterSection files=files next_id=next_id/>
+                    </div>
+                    <TrustRow/>
+                </section>
 
-                    <HowItWorks/>
-                    <SupportBanner/>
-                </main>
+                <HowItWorks/>
+                <Formats/>
+                <Faq/>
+                <SupportBanner/>
+            </main>
 
-                <Footer/>
-            </div>
+            <Footer/>
         </div>
     }
 }

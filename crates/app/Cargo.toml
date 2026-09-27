@@ -28,5 +28,11 @@ features = [
     "HtmlInputElement",
     "HtmlAnchorElement",
     "HtmlSelectElement",
+    "HtmlElement",
+    "Document",
+    "Element",
+    "Navigator",
+    "KeyboardEvent",
+    "ClipboardEvent",
     "console",
 ]

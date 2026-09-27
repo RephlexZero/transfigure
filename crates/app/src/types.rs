@@ -1,8 +1,13 @@
+use std::sync::Arc;
+
+// Byte buffers are reference-counted so cloning the file list (which the
+// reactive system does on every update) never copies file contents.
+
 #[derive(Clone, PartialEq)]
 pub enum FileStatus {
     Pending,
     Converting,
-    Done { data: Vec<u8>, elapsed_ms: u32 },
+    Done { data: Arc<[u8]>, elapsed_ms: u32 },
     Error(String),
 }
 
@@ -12,11 +17,11 @@ impl FileStatus {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct BatchFile {
     pub id: usize,
     pub name: String,
-    pub bytes: Vec<u8>,
+    pub bytes: Arc<[u8]>,
     pub extension: String,
     pub size: usize,
     pub target: Option<String>,

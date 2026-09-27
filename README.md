@@ -51,7 +51,7 @@ Batch conversion is supported — drop multiple files at once and convert them a
 | Layer      | Technology                                                   |
 |------------|--------------------------------------------------------------|
 | UI         | [Leptos](https://leptos.dev/) (Rust → WASM, CSR)            |
-| Styling    | [Tailwind CSS v3](https://tailwindcss.com/) + [DaisyUI v4](https://daisyui.com/) |
+| Styling    | [Tailwind CSS v3](https://tailwindcss.com/), self-hosted Inter + JetBrains Mono |
 | Build      | [Trunk](https://trunkrs.dev/)                                |
 | Conversion | Pure Rust compiled to WebAssembly via `wasm-bindgen`         |
 | Audio      | [`symphonia`](https://github.com/pdeljanov/Symphonia) (decode) + [`hound`](https://github.com/ruuda/hound) (WAV encode) |
@@ -64,7 +64,8 @@ Batch conversion is supported — drop multiple files at once and convert them a
 transfigure/
 ├── crates/
 │   ├── app/                # Leptos frontend (compiled to WASM)
-│   │   ├── src/components/ # UI components (header, hero, converter, info)
+│   │   ├── src/components/ # UI components (header, hero, converter, info, icons)
+│   │   ├── fonts/          # Self-hosted variable fonts (OFL)
 │   │   ├── src/utils.rs    # Download/format helpers
 │   │   └── index.html      # Entry point for Trunk
 │   └── converter/      # Conversion engine (no WASM dependencies)
@@ -77,7 +78,7 @@ transfigure/
 ├── input.css           # Tailwind source
 ├── Trunk.toml          # Trunk build config
 ├── Cargo.toml          # Workspace manifest
-└── package.json        # Tailwind/DaisyUI build scripts
+└── package.json        # Tailwind build scripts
 ```
 
 ---

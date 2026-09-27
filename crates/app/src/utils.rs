@@ -34,6 +34,31 @@ pub fn format_elapsed(ms: u32) -> String {
     }
 }
 
+/// Broad file family, used to pick an icon and tint for a file.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Category {
+    Image,
+    Audio,
+    Document,
+    Data,
+    Config,
+    Encoding,
+    Other,
+}
+
+pub fn category_of(ext: &str) -> Category {
+    match ext {
+        "png" | "jpg" | "jpeg" | "webp" | "gif" | "bmp" | "tiff" | "tif" | "ico" | "qoi"
+        | "tga" | "hdr" | "dds" | "exr" | "svg" | "avif" => Category::Image,
+        "mp3" | "flac" | "ogg" | "wav" => Category::Audio,
+        "md" | "markdown" | "html" | "txt" | "text" | "docx" | "rtf" | "pdf" => Category::Document,
+        "csv" | "tsv" => Category::Data,
+        "json" | "yaml" | "yml" | "toml" => Category::Config,
+        "base64" | "bin" => Category::Encoding,
+        _ => Category::Other,
+    }
+}
+
 pub fn mime_type_for(ext: &str) -> &'static str {
     match ext {
         "png" => "image/png",
@@ -174,6 +199,20 @@ mod tests {
     fn elapsed_seconds() {
         assert_eq!(format_elapsed(1000), "1.0 s");
         assert_eq!(format_elapsed(2350), "2.4 s");
+    }
+
+    // ── category_of ─────────────────────────────────
+
+    #[test]
+    fn category_of_known_families() {
+        assert_eq!(category_of("png"), Category::Image);
+        assert_eq!(category_of("svg"), Category::Image);
+        assert_eq!(category_of("flac"), Category::Audio);
+        assert_eq!(category_of("md"), Category::Document);
+        assert_eq!(category_of("csv"), Category::Data);
+        assert_eq!(category_of("toml"), Category::Config);
+        assert_eq!(category_of("base64"), Category::Encoding);
+        assert_eq!(category_of(""), Category::Other);
     }
 
     // ── mime_type_for ───────────────────────────────
