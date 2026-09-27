@@ -43,14 +43,14 @@ jobs:
 
       - name: Ruff
         run: |
-          uvx ruff check
-          uvx ruff format --check
+          uvx ruff@0.16.9 check
+          uvx ruff@0.16.9 format --check
 
       - name: ty
         run: |
           script=crates/converter/tests/fixtures/generate.py
           uv sync --script "$script"
-          uvx ty check --python "$(uv python find --script "$script")" "$script"
+          uvx ty@0.0.84 check --python "$(uv python find --script "$script")" "$script"
 
   audit:
     name: Security Audit

@@ -26,9 +26,9 @@ import shutil
 import subprocess
 import tempfile
 
-from PIL import Image, ImageDraw
 import openpyxl
 import pillow_heif
+from PIL import Image, ImageDraw
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 MARKER = "Transfigure fixture — Café naïve 42"
