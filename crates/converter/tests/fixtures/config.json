@@ -1,0 +1,28 @@
+{
+  "title": "Transfigure fixture — Café naïve 42",
+  "version": 3,
+  "enabled": true,
+  "ratio": 0.75,
+  "tags": [
+    "a",
+    "b",
+    "c"
+  ],
+  "owner": {
+    "name": "Tom",
+    "email": "tom@example.com"
+  },
+  "servers": [
+    {
+      "host": "alpha",
+      "port": 8001
+    },
+    {
+      "host": "beta",
+      "port": 8002
+    }
+  ],
+  "empty_list": [],
+  "tricky": "yes: no # not a comment",
+  "numeric_string": "007"
+}

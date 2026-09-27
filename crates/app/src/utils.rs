@@ -34,6 +34,37 @@ pub fn format_elapsed(ms: u32) -> String {
     }
 }
 
+/// Broad file family, used to pick an icon and tint for a file.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Category {
+    Image,
+    Audio,
+    Document,
+    Data,
+    Config,
+    Encoding,
+    Other,
+}
+
+pub fn category_of(ext: &str) -> Category {
+    match ext {
+        "png" | "jpg" | "jpeg" | "jfif" | "webp" | "gif" | "bmp" | "tiff" | "tif" | "ico"
+        | "qoi" | "tga" | "hdr" | "dds" | "exr" | "svg" | "avif" | "heic" | "heif" => {
+            Category::Image
+        }
+        "mp3" | "flac" | "ogg" | "oga" | "wav" | "m4a" | "aac" | "aiff" | "aif" | "caf" => {
+            Category::Audio
+        }
+        "md" | "markdown" | "html" | "htm" | "txt" | "text" | "docx" | "odt" | "rtf" | "pdf" => {
+            Category::Document
+        }
+        "csv" | "tsv" | "xlsx" | "xls" | "ods" => Category::Data,
+        "json" | "yaml" | "yml" | "toml" | "xml" => Category::Config,
+        "base64" | "bin" => Category::Encoding,
+        _ => Category::Other,
+    }
+}
+
 pub fn mime_type_for(ext: &str) -> &'static str {
     match ext {
         "png" => "image/png",
@@ -60,12 +91,37 @@ pub fn mime_type_for(ext: &str) -> &'static str {
         "json" => "application/json",
         "yaml" | "yml" => "application/x-yaml",
         "toml" => "application/toml",
+        "xml" => "application/xml",
+        "xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "mp3" => "audio/mpeg",
+        "flac" => "audio/flac",
+        "wav" => "audio/wav",
+        "base64" => "text/plain",
         _ => "application/octet-stream",
     }
 }
 
 pub fn make_output_name(original_name: &str, target_ext: &str) -> String {
-    if let Some((stem, _)) = original_name.rsplit_once('.') {
+    // Base64 wraps the whole file, so keep its name: `photo.png.base64`
+    // decodes back to `photo.png`.
+    if target_ext == "base64" {
+        return format!("{original_name}.base64");
+    }
+    if target_ext == "bin" {
+        let lower = original_name.to_lowercase();
+        for suffix in [".base64", ".b64"] {
+            if lower.ends_with(suffix) {
+                let inner = &original_name[..original_name.len() - suffix.len()];
+                if inner.contains('.') {
+                    return inner.to_string();
+                }
+                return format!("{inner}.bin");
+            }
+        }
+    }
+    if let Some((stem, _)) = original_name.rsplit_once('.')
+        && !stem.is_empty()
+    {
         format!("{stem}.{target_ext}")
     } else {
         format!("{original_name}.{target_ext}")
@@ -74,7 +130,12 @@ pub fn make_output_name(original_name: &str, target_ext: &str) -> String {
 
 pub fn download_blob(data: &[u8], original_name: &str, target_ext: &str) {
     let output_name = make_output_name(original_name, target_ext);
-    download_blob_raw(data, &output_name, mime_type_for(target_ext));
+    let ext = output_name
+        .rsplit('.')
+        .next()
+        .unwrap_or(target_ext)
+        .to_lowercase();
+    download_blob_raw(data, &output_name, mime_type_for(&ext));
 }
 
 pub fn download_blob_raw(data: &[u8], filename: &str, mime: &str) {
@@ -176,6 +237,23 @@ mod tests {
         assert_eq!(format_elapsed(2350), "2.4 s");
     }
 
+    // ── category_of ─────────────────────────────────
+
+    #[test]
+    fn category_of_known_families() {
+        assert_eq!(category_of("png"), Category::Image);
+        assert_eq!(category_of("svg"), Category::Image);
+        assert_eq!(category_of("flac"), Category::Audio);
+        assert_eq!(category_of("md"), Category::Document);
+        assert_eq!(category_of("csv"), Category::Data);
+        assert_eq!(category_of("toml"), Category::Config);
+        assert_eq!(category_of("heic"), Category::Image);
+        assert_eq!(category_of("m4a"), Category::Audio);
+        assert_eq!(category_of("xlsx"), Category::Data);
+        assert_eq!(category_of("base64"), Category::Encoding);
+        assert_eq!(category_of(""), Category::Other);
+    }
+
     // ── mime_type_for ───────────────────────────────
 
     #[test]
@@ -209,6 +287,18 @@ mod tests {
     #[test]
     fn make_output_name_no_extension() {
         assert_eq!(make_output_name("README", "txt"), "README.txt");
+    }
+
+    #[test]
+    fn base64_names_round_trip() {
+        assert_eq!(make_output_name("photo.png", "base64"), "photo.png.base64");
+        assert_eq!(make_output_name("photo.png.base64", "bin"), "photo.png");
+        assert_eq!(make_output_name("blob.b64", "bin"), "blob.bin");
+    }
+
+    #[test]
+    fn make_output_name_dotfile() {
+        assert_eq!(make_output_name(".env", "json"), ".env.json");
     }
 
     #[test]

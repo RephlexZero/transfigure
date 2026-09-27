@@ -27,8 +27,30 @@ jobs:
       - name: Clippy
         run: cargo clippy --all-targets -- -D warnings
 
-      - name: Unit tests
+      - name: Tests (including the conversion matrix)
         run: cargo test --workspace
+
+      - name: WASM build check
+        run: cargo check -p transfigure-app --target wasm32-unknown-unknown
+
+  python:
+    name: Python lint (ruff, ty)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Ruff
+        run: |
+          uvx ruff@0.16.9 check
+          uvx ruff@0.16.9 format --check
+
+      - name: ty
+        run: |
+          script=crates/converter/tests/fixtures/generate.py
+          uv sync --script "$script"
+          uvx ty@0.0.84 check --python "$(uv python find --script "$script")" "$script"
 
   audit:
     name: Security Audit

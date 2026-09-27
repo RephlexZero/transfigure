@@ -2,19 +2,23 @@ use serde::Deserialize;
 
 pub mod archive;
 mod audio;
-mod document;
+mod dds;
+mod doc;
 mod image_conv;
-mod spreadsheet;
+mod pdf;
+mod structured;
+mod table;
+mod xml;
 
-/// All input file formats the converter can handle.
-/// This is the single source of truth for the file picker's `accept` attribute.
+/// Every input extension the converter accepts (the file picker's `accept`).
 pub const ALL_INPUT_FORMATS: &[&str] = &[
     // images
-    "png", "jpg", "jpeg", "webp", "gif", "bmp", "tiff", "tif", "ico", "qoi", "tga", "hdr", "dds",
-    "exr", "svg", // audio
-    "mp3", "flac", "ogg", "wav", // documents
-    "md", "markdown", "html", "txt", "docx", "rtf", "pdf", // data / config
-    "csv", "tsv", "json", "yaml", "yml", "toml", // encoding
+    "png", "jpg", "jpeg", "jfif", "webp", "gif", "bmp", "tiff", "tif", "ico", "qoi", "tga", "hdr",
+    "dds", "exr", "svg", "heic", "heif", // audio
+    "mp3", "wav", "flac", "ogg", "oga", "m4a", "aac", "aiff", "aif", "caf", // documents
+    "md", "markdown", "html", "htm", "txt", "docx", "odt", "rtf", "pdf", // tables
+    "csv", "tsv", "xlsx", "xls", "ods", // structured data
+    "json", "yaml", "yml", "toml", "xml", // encoding
     "base64",
 ];
 
@@ -26,115 +30,170 @@ pub struct ConvertConfig {
     pub quality: Option<u8>,
 }
 
+/// Map extension aliases onto one name per format.
+fn canonical(ext: &str) -> &str {
+    match ext {
+        "jpeg" | "jfif" | "jpe" => "jpg",
+        "tif" => "tiff",
+        "heif" => "heic",
+        "oga" => "ogg",
+        "aif" => "aiff",
+        "htm" => "html",
+        "markdown" => "md",
+        "text" => "txt",
+        "yml" => "yaml",
+        other => other,
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Kind {
+    Image,
+    Audio,
+    Document,
+    Table,
+    Data,
+    Base64,
+}
+
+fn kind(ext: &str) -> Option<Kind> {
+    Some(match ext {
+        "png" | "jpg" | "webp" | "gif" | "bmp" | "tiff" | "ico" | "qoi" | "tga" | "hdr" | "dds"
+        | "exr" | "svg" | "heic" => Kind::Image,
+        "mp3" | "wav" | "flac" | "ogg" | "m4a" | "aac" | "aiff" | "caf" => Kind::Audio,
+        "md" | "html" | "txt" | "docx" | "odt" | "rtf" | "pdf" => Kind::Document,
+        "csv" | "tsv" | "xlsx" | "xls" | "ods" => Kind::Table,
+        "json" | "yaml" | "toml" | "xml" => Kind::Data,
+        "base64" => Kind::Base64,
+        _ => return None,
+    })
+}
+
+const IMAGE_OUT: &[&str] = &[
+    "png", "jpg", "webp", "avif", "pdf", "gif", "bmp", "tiff", "ico", "qoi", "tga",
+];
+const AUDIO_OUT: &[&str] = &["mp3", "wav", "flac"];
+const DOC_OUT: &[&str] = &["pdf", "docx", "html", "md", "txt"];
+const TABLE_OUT: &[&str] = &["xlsx", "csv", "json", "tsv"];
+const DATA_OUT: &[&str] = &["json", "yaml", "toml", "xml"];
+
 pub fn convert(input: &[u8], config_json: &str) -> Result<Vec<u8>, String> {
     let config: ConvertConfig =
         serde_json::from_str(config_json).map_err(|e| format!("Invalid config: {e}"))?;
 
-    let from = config.from.to_lowercase();
-    let to = config.to.to_lowercase();
+    let from_lower = config.from.to_lowercase();
+    let to_lower = config.to.to_lowercase();
+    let from = canonical(&from_lower);
+    let to = canonical(&to_lower);
 
-    match (from.as_str(), to.as_str()) {
-        // Image conversions
-        (f, t) if is_image_input_format(f) && is_image_output_format(t) => {
-            image_conv::convert_image(input, f, t, config.quality)
-        }
-        ("svg", "png") => image_conv::svg_to_png(input),
-
-        // Documents
-        ("md" | "markdown", "html") => document::markdown_to_html(input),
-        ("md" | "markdown", "txt" | "text") => document::markdown_to_text(input),
-        ("md" | "markdown", "pdf") => document::markdown_to_pdf(input),
-        ("html", "md" | "markdown") => document::html_to_markdown(input),
-        ("html", "pdf") => document::html_to_pdf(input),
-        ("docx", "txt" | "text") => document::docx_to_text(input),
-        ("docx", "html") => document::docx_to_html(input),
-        ("rtf", "txt" | "text") => document::rtf_to_text(input),
-        // PDF
-        ("pdf", "txt" | "text") => document::pdf_to_text(input),
-        ("pdf", "html") => document::pdf_to_html(input),
-        ("txt" | "text", "pdf") => document::text_to_pdf(input),
-
-        // Spreadsheet / data
-        ("csv", "json") => spreadsheet::csv_to_json(input),
-        ("json", "csv") => spreadsheet::json_to_csv(input),
-        ("csv", "tsv") => spreadsheet::csv_to_tsv(input),
-        ("tsv", "csv") => spreadsheet::tsv_to_csv(input),
-
-        // Audio
-        (f, "wav") if is_audio_format(f) => audio::to_wav(input, f),
-
-        // Encoding
-        ("base64", _) => document::base64_decode(input),
-        (_, "base64") => document::base64_encode(input),
-
-        // Config formats
-        ("json", "yaml" | "yml") => document::json_to_yaml(input),
-        ("yaml" | "yml", "json") => document::yaml_to_json(input),
-        ("toml", "json") => document::toml_to_json(input),
-        ("json", "toml") => document::json_to_toml(input),
-
-        _ => Err(format!(
-            "Unsupported conversion: {} → {}",
+    let unsupported = || {
+        Err(format!(
+            "Unsupported conversion: {} \u{2192} {}",
             config.from, config.to
-        )),
+        ))
+    };
+
+    // Encoding works on any bytes.
+    if to == "base64" && from != "base64" {
+        return Ok(base64_encode(input));
+    }
+    if from == "base64" {
+        return base64_decode(input);
+    }
+
+    match (kind(from), kind(to)) {
+        (Some(Kind::Image), _) if IMAGE_OUT.contains(&to) => {
+            image_conv::convert_image(input, from, to, config.quality)
+        }
+        (Some(Kind::Audio), Some(Kind::Audio)) if AUDIO_OUT.contains(&to) => {
+            audio::convert(input, from, to, config.quality)
+        }
+        (Some(Kind::Document), Some(Kind::Document)) if DOC_OUT.contains(&to) => {
+            doc::convert(input, from, to)
+        }
+        (Some(Kind::Table), _) if TABLE_OUT.contains(&to) => {
+            table::write(&table::read(input, from)?, to)
+        }
+        // JSON is both: records go to table formats, anything to data formats.
+        (Some(Kind::Data), _) if from == "json" && TABLE_OUT.contains(&to) => {
+            table::write(&table::read(input, "json")?, to)
+        }
+        (Some(Kind::Data), Some(Kind::Data)) => structured::convert(input, from, to),
+        _ => unsupported(),
     }
 }
 
-/// Returns the list of output formats available for a given input extension.
+fn base64_encode(input: &[u8]) -> Vec<u8> {
+    use base64::Engine;
+    let mut out = base64::engine::general_purpose::STANDARD
+        .encode(input)
+        .into_bytes();
+    out.push(b'\n');
+    out
+}
+
+fn base64_decode(input: &[u8]) -> Result<Vec<u8>, String> {
+    use base64::Engine;
+    let text = std::str::from_utf8(input).map_err(|e| format!("Invalid UTF-8: {e}"))?;
+    // Accept wrapped lines, whitespace and the URL-safe alphabet.
+    let cleaned: String = text
+        .chars()
+        .filter(|c| !c.is_whitespace())
+        .map(|c| match c {
+            '-' => '+',
+            '_' => '/',
+            c => c,
+        })
+        .collect();
+    let trimmed = cleaned.trim_end_matches('=');
+    base64::engine::general_purpose::STANDARD_NO_PAD
+        .decode(trimmed)
+        .map_err(|e| format!("Invalid base64: {e}"))
+}
+
+/// Output formats offered for an input extension, most useful first. The
+/// first entry is the default choice in the UI.
 pub fn get_output_formats(input_ext: &str) -> Vec<&'static str> {
-    let ext = input_ext.to_lowercase();
-    match ext.as_str() {
-        "png" => vec![
-            "jpg", "webp", "avif", "gif", "bmp", "tiff", "qoi", "tga", "ico",
-        ],
-        "jpg" | "jpeg" => vec![
-            "png", "webp", "avif", "gif", "bmp", "tiff", "qoi", "tga", "ico",
-        ],
-        "webp" => vec![
-            "png", "jpg", "avif", "gif", "bmp", "tiff", "qoi", "tga", "ico",
-        ],
-        "gif" => vec![
-            "png", "jpg", "webp", "avif", "bmp", "tiff", "qoi", "tga", "ico",
-        ],
-        "bmp" => vec![
-            "png", "jpg", "webp", "avif", "gif", "tiff", "qoi", "tga", "ico",
-        ],
-        "tiff" | "tif" => vec![
-            "png", "jpg", "webp", "avif", "gif", "bmp", "qoi", "tga", "ico",
-        ],
-        "ico" => vec![
-            "png", "jpg", "webp", "avif", "gif", "bmp", "tiff", "qoi", "tga",
-        ],
-        "qoi" => vec![
-            "png", "jpg", "webp", "avif", "gif", "bmp", "tiff", "tga", "ico",
-        ],
-        "tga" => vec![
-            "png", "jpg", "webp", "avif", "gif", "bmp", "tiff", "qoi", "ico",
-        ],
-        "hdr" => vec!["png", "jpg", "webp", "avif", "bmp", "tiff", "tga"],
-        "dds" => vec!["png", "jpg", "webp", "avif", "bmp", "tiff", "tga"],
-        "exr" => vec!["png", "jpg", "webp", "avif", "bmp", "tiff", "tga"],
-        "svg" => vec!["png"],
-        "mp3" | "flac" | "ogg" | "wav" => vec!["wav"],
-        "md" | "markdown" => vec!["html", "txt", "pdf"],
-        "html" => vec!["md", "pdf"],
-        "docx" => vec!["txt", "html"],
-        "rtf" => vec!["txt"],
-        "pdf" => vec!["txt", "html"],
-        "txt" | "text" => vec!["pdf"],
-        "csv" => vec!["json", "tsv"],
-        "tsv" => vec!["csv"],
-        "json" => vec!["csv", "yaml", "toml"],
-        "yaml" | "yml" => vec!["json"],
-        "toml" => vec!["json"],
-        "base64" => vec!["bin"],
-        _ => vec!["base64"],
-    }
+    let lower = input_ext.to_lowercase();
+    let from = canonical(&lower);
+    let without_self = |list: &[&'static str]| -> Vec<&'static str> {
+        list.iter().copied().filter(|f| *f != from).collect()
+    };
+    let mut out = match kind(from) {
+        Some(Kind::Image) => {
+            let mut v = without_self(IMAGE_OUT);
+            // Phone photos are usually wanted as JPG.
+            if from == "heic" {
+                v.retain(|f| *f != "jpg");
+                v.insert(0, "jpg");
+            }
+            v
+        }
+        Some(Kind::Audio) => without_self(AUDIO_OUT),
+        Some(Kind::Document) => {
+            // Markdown's natural first target is HTML; others default to PDF.
+            let mut v = without_self(DOC_OUT);
+            if from == "md" {
+                v.retain(|f| *f != "html");
+                v.insert(0, "html");
+            } else if from == "pdf" {
+                v = vec!["txt", "md", "docx", "html"];
+            }
+            v
+        }
+        Some(Kind::Table) => without_self(TABLE_OUT),
+        Some(Kind::Data) if from == "json" => vec!["csv", "xlsx", "yaml", "toml", "xml", "tsv"],
+        Some(Kind::Data) => without_self(DATA_OUT),
+        Some(Kind::Base64) => return vec!["bin"],
+        None => Vec::new(),
+    };
+    out.push("base64");
+    out
 }
 
 /// Detects the format from a filename extension.
 pub fn detect_format(filename: &str) -> Option<String> {
-    let ext = filename.rsplit('.').next()?;
+    let (_, ext) = filename.rsplit_once('.')?;
     let lower = ext.to_lowercase();
     if is_known_format(&lower) {
         Some(lower)
@@ -143,92 +202,8 @@ pub fn detect_format(filename: &str) -> Option<String> {
     }
 }
 
-/// Formats that can be read as image input (excludes AVIF, which needs dav1d C lib for decode).
-fn is_image_input_format(fmt: &str) -> bool {
-    matches!(
-        fmt,
-        "png"
-            | "jpg"
-            | "jpeg"
-            | "webp"
-            | "gif"
-            | "bmp"
-            | "tiff"
-            | "tif"
-            | "ico"
-            | "qoi"
-            | "tga"
-            | "hdr"
-            | "dds"
-            | "exr"
-    )
-}
-
-/// Formats that can be written as image output (includes AVIF via pure-Rust ravif encoder).
-fn is_image_output_format(fmt: &str) -> bool {
-    matches!(
-        fmt,
-        "png"
-            | "jpg"
-            | "jpeg"
-            | "webp"
-            | "gif"
-            | "bmp"
-            | "tiff"
-            | "tif"
-            | "avif"
-            | "ico"
-            | "qoi"
-            | "tga"
-            | "hdr"
-            | "dds"
-            | "exr"
-    )
-}
-
-fn is_audio_format(fmt: &str) -> bool {
-    matches!(fmt, "mp3" | "flac" | "ogg" | "wav")
-}
-
 fn is_known_format(fmt: &str) -> bool {
-    matches!(
-        fmt,
-        "png"
-            | "jpg"
-            | "jpeg"
-            | "webp"
-            | "gif"
-            | "bmp"
-            | "tiff"
-            | "tif"
-            | "avif"
-            | "ico"
-            | "qoi"
-            | "tga"
-            | "hdr"
-            | "dds"
-            | "exr"
-            | "svg"
-            | "md"
-            | "markdown"
-            | "html"
-            | "txt"
-            | "text"
-            | "docx"
-            | "rtf"
-            | "csv"
-            | "tsv"
-            | "json"
-            | "yaml"
-            | "yml"
-            | "toml"
-            | "base64"
-            | "mp3"
-            | "flac"
-            | "ogg"
-            | "wav"
-            | "pdf"
-    )
+    fmt == "text" || ALL_INPUT_FORMATS.contains(&fmt)
 }
 
 #[cfg(test)]
@@ -569,7 +544,7 @@ mod tests {
         let docx = make_minimal_docx(xml);
         let result = convert(&docx, r#"{"from":"docx","to":"html"}"#).unwrap();
         let html = String::from_utf8(result).unwrap();
-        assert!(html.contains("<html>") || html.contains("<p>"));
+        assert!(html.contains("<p>"));
         assert!(html.contains("Content"));
     }
 
@@ -837,22 +812,25 @@ mod tests {
 
     #[test]
     fn audio_output_formats_mp3() {
-        assert_eq!(get_output_formats("mp3"), vec!["wav"]);
+        assert_eq!(get_output_formats("mp3"), vec!["wav", "flac", "base64"]);
     }
 
     #[test]
     fn audio_output_formats_flac() {
-        assert_eq!(get_output_formats("flac"), vec!["wav"]);
+        assert_eq!(get_output_formats("flac"), vec!["mp3", "wav", "base64"]);
     }
 
     #[test]
     fn audio_output_formats_ogg() {
-        assert_eq!(get_output_formats("ogg"), vec!["wav"]);
+        assert_eq!(
+            get_output_formats("ogg"),
+            vec!["mp3", "wav", "flac", "base64"]
+        );
     }
 
     #[test]
     fn audio_output_formats_wav() {
-        assert_eq!(get_output_formats("wav"), vec!["wav"]);
+        assert_eq!(get_output_formats("wav"), vec!["mp3", "flac", "base64"]);
     }
 
     #[test]
@@ -976,7 +954,7 @@ mod tests {
     }
 
     #[test]
-    fn pdf_to_html_contains_pre_tag() {
+    fn pdf_to_html_is_a_document() {
         let pdf = convert(b"Sample text", r#"{"from":"txt","to":"pdf"}"#).unwrap();
         let html_result = convert(&pdf, r#"{"from":"pdf","to":"html"}"#);
         assert!(
@@ -985,7 +963,8 @@ mod tests {
             html_result.err()
         );
         let html = String::from_utf8(html_result.unwrap()).unwrap();
-        assert!(html.contains("<pre>") || html.contains("<html>"));
+        assert!(html.contains("<html"));
+        assert!(html.contains("Sample text"));
     }
 
     #[test]

@@ -2,185 +2,209 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Fonts (self-hosted: the CSP only allows font-src 'self') ── */
+
+@font-face {
+  font-family: "InterVariable";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/inter-var.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-var.woff2") format("woff2");
+}
+
+/* ── Theme tokens ─────────────────────────────────── */
+
 @layer base {
-  * {
-    @apply scroll-smooth;
-    border-radius: 0 !important;
+  :root {
+    color-scheme: light;
+    --page: 250 249 247;
+    --surface: 255 255 255;
+    --sunken: 245 244 241;
+    --line: 231 228 223;
+    --line-strong: 212 208 202;
+    --fg: 28 25 23;
+    --muted: 87 83 78;
+    --subtle: 128 122 116;
+    --ink: 28 25 23;
+    --on-ink: 255 255 255;
+    --accent: 217 128 20;
+    --accent-strong: 170 90 8;
+    --ok: 21 128 61;
+    --bad: 190 40 40;
+    --shadow: 41 37 36;
   }
 
-  *::before,
-  *::after {
-    border-radius: 0 !important;
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --page: 14 13 12;
+      --surface: 24 22 20;
+      --sunken: 19 18 16;
+      --line: 44 41 38;
+      --line-strong: 64 60 56;
+      --fg: 240 238 234;
+      --muted: 172 166 160;
+      --subtle: 124 118 112;
+      --ink: 240 238 234;
+      --on-ink: 24 22 20;
+      --accent: 240 166 60;
+      --accent-strong: 246 190 110;
+      --ok: 110 205 140;
+      --bad: 245 125 115;
+      --shadow: 0 0 0;
+    }
   }
 
   html {
-    @apply font-mono;
+    @apply bg-page text-fg font-sans antialiased;
+    font-feature-settings: "cv11", "ss03";
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
   }
 
   ::selection {
-    @apply bg-primary text-primary-content;
+    @apply bg-accent/25;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-accent/70 ring-offset-2 ring-offset-page;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 1ms !important;
+      transition-duration: 1ms !important;
+    }
   }
 }
 
 @layer components {
-  /* ── Page furniture ──────────────────────────────── */
+  /* ── Buttons ─────────────────────────────────────── */
 
-  /* Drafting-table grid: faint ruled lines on the page background. */
-  .blueprint-grid {
-    background-image:
-      linear-gradient(rgba(230, 223, 208, 0.035) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(230, 223, 208, 0.035) 1px, transparent 1px);
-    background-size: 48px 48px;
-  }
-
-  /* Vignette so the grid fades toward the edges. */
-  .grid-vignette {
-    background: radial-gradient(
-      ellipse 80% 60% at 50% 0%,
-      transparent 0%,
-      rgba(11, 10, 7, 0.85) 100%
-    );
-  }
-
-  .hairline {
-    @apply border-base-content/15;
-  }
-
-  /* Section heading: small caps with a leading index, e.g. "§ 02 · FORMATS" */
-  .section-tag {
-    @apply text-xs font-bold uppercase tracking-[0.3em] text-primary;
-  }
-
-  /* ── Panels ──────────────────────────────────────── */
-
-  /* A panel framed like a plate in a technical manual: solid border,
-     registration ticks drawn in the corners via pseudo-elements. */
-  .plate {
-    @apply relative border hairline bg-base-200/80 p-6 sm:p-8;
-  }
-
-  .plate::before,
-  .plate::after {
-    content: "";
-    @apply absolute w-3 h-3 pointer-events-none;
-  }
-
-  .plate::before {
-    @apply -top-px -left-px border-t-2 border-l-2 border-primary/70;
-  }
-
-  .plate::after {
-    @apply -bottom-px -right-px border-b-2 border-r-2 border-primary/70;
-  }
-
-  /* ── Ledger (file list) ──────────────────────────── */
-
-  .ledger-row {
-    @apply grid items-center gap-x-3 gap-y-2 px-3 py-2.5 border-b hairline animate-row-in;
-    grid-template-columns: 2rem 3.25rem minmax(0, 1fr);
-  }
-
-  /* On narrow screens the controls drop to a second line, full width. */
-  .ledger-controls {
-    @apply col-span-full flex items-center gap-2 justify-end;
-  }
-
-  @media (min-width: 640px) {
-    .ledger-row {
-      grid-template-columns: 2rem 3.25rem minmax(0, 1fr) auto;
-    }
-
-    .ledger-controls {
-      grid-column: auto;
-    }
-  }
-
-  .ledger-index {
-    @apply text-xs text-base-content/35 tabular-nums;
-  }
-
-  /* Extension cell: bordered glyph chip instead of an emoji. */
-  .ext-chip {
-    @apply inline-flex items-center justify-center w-[3.25rem] py-1 text-[10px]
-      font-bold uppercase tracking-wider border border-base-content/30
-      text-base-content/80 bg-base-100;
-  }
-
-  /* ── Stamps (status) ─────────────────────────────── */
-
-  .stamp {
-    @apply inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-bold
-      uppercase tracking-[0.15em] border;
-  }
-
-  .stamp-idle {
-    @apply border-base-content/25 text-base-content/45;
-  }
-
-  .stamp-busy {
-    @apply border-primary/60 text-primary animate-pulse-soft;
-  }
-
-  .stamp-done {
-    @apply border-secondary/70 text-secondary animate-stamp-in;
-  }
-
-  .stamp-error {
-    @apply border-error/70 text-error animate-stamp-in;
-  }
-
-  /* ── Controls ────────────────────────────────────── */
-
-  /* Square uppercase buttons that match the ledger aesthetic. */
   .btn {
-    @apply uppercase tracking-[0.12em] font-bold;
+    @apply inline-flex items-center justify-center gap-2 h-9 px-3.5 rounded-lg
+      text-sm font-medium whitespace-nowrap select-none
+      transition-[background-color,border-color,color,box-shadow,transform] duration-150
+      disabled:pointer-events-none disabled:opacity-45;
   }
 
+  .btn:active {
+    transform: translateY(0.5px);
+  }
+
+  .btn-lg {
+    @apply h-11 px-5 text-[15px] rounded-xl;
+  }
+
+  .btn-sm {
+    @apply h-8 px-2.5 text-[13px] rounded-md;
+  }
+
+  .btn-primary {
+    @apply bg-ink text-on-ink shadow-sm hover:bg-ink/85;
+  }
+
+  .btn-secondary {
+    @apply bg-surface text-fg border border-line-strong shadow-sm
+      hover:bg-sunken hover:border-line-strong;
+  }
+
+  .btn-ghost {
+    @apply text-muted hover:text-fg hover:bg-fg/[0.05];
+  }
+
+  .icon-btn {
+    @apply inline-flex items-center justify-center size-8 rounded-md text-subtle
+      transition-colors hover:text-fg hover:bg-fg/[0.06]
+      disabled:pointer-events-none disabled:opacity-40;
+  }
+
+  /* ── Form controls ───────────────────────────────── */
+
+  /* Native <select> with a drawn chevron, so it stays accessible and gets
+     the platform picker on mobile. */
   .select {
-    @apply uppercase tracking-wide font-bold;
+    @apply appearance-none h-8 pl-2.5 pr-7 rounded-md border border-line-strong
+      bg-surface text-[13px] font-medium font-mono uppercase text-fg cursor-pointer
+      transition-colors hover:border-subtle disabled:opacity-50 disabled:cursor-default;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23807a74' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4.5 6.5 3.5 3.5 3.5-3.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.4rem center;
+    background-size: 14px;
   }
 
-  /* Range input styled as a thin rule with a square gold thumb. */
-  .quality-range {
-    @apply w-full h-px appearance-none bg-base-content/25 cursor-pointer;
+  .range {
+    @apply w-full h-1.5 cursor-pointer;
+    accent-color: rgb(var(--accent));
   }
 
-  .quality-range::-webkit-slider-thumb {
-    @apply appearance-none w-3 h-3 bg-primary border border-primary-content;
+  /* ── Surfaces ────────────────────────────────────── */
+
+  .card {
+    @apply bg-surface border border-line rounded-2xl shadow-card;
   }
 
-  .quality-range::-moz-range-thumb {
-    @apply w-3 h-3 bg-primary border border-primary-content;
+  .kbd {
+    @apply inline-flex items-center h-5 px-1.5 rounded border border-line-strong
+      bg-sunken font-mono text-[11px] text-muted leading-none;
+  }
+
+  /* Small monospace format label, e.g. PNG. */
+  .fmt {
+    @apply inline-flex items-center h-6 px-2 rounded-md bg-sunken border border-line
+      font-mono text-[11px] font-medium uppercase tracking-wide text-muted;
+  }
+
+  .eyebrow {
+    @apply text-[13px] font-medium text-accent-strong;
+  }
+
+  .section-title {
+    @apply text-2xl sm:text-3xl font-semibold tracking-tight text-fg;
   }
 
   /* ── Drop zone ───────────────────────────────────── */
 
-  .drop-slab {
-    @apply relative border-2 border-base-content/20 cursor-pointer
-      transition-colors duration-200 bg-base-100/40;
+  .dropzone {
+    @apply relative flex flex-col items-center justify-center text-center
+      rounded-xl border-[1.5px] border-dashed border-line-strong bg-sunken/60
+      cursor-pointer transition-colors duration-150
+      hover:border-accent/60 hover:bg-accent/[0.04];
   }
 
-  .drop-slab:hover {
-    @apply border-primary/50;
+  /* ── File rows ───────────────────────────────────── */
+
+  .file-row {
+    @apply grid items-center gap-x-3 gap-y-2 px-4 sm:px-5 py-3 animate-row-in;
+    grid-template-columns: 2.25rem minmax(0, 1fr) auto;
   }
 
-  .drop-slab-active {
-    @apply border-primary bg-primary/10;
+  /* Controls wrap under the file name on phones. */
+  .file-row-controls {
+    @apply col-span-full flex items-center gap-2 justify-end pl-12;
   }
 
-  /* Crosshair in each corner of the drop slab. */
-  .drop-slab .corner {
-    @apply absolute w-2.5 h-2.5 border-primary/60 pointer-events-none
-      transition-all duration-200;
+  @media (min-width: 640px) {
+    .file-row-controls {
+      @apply col-auto pl-0;
+    }
   }
 
-  .drop-slab:hover .corner,
-  .drop-slab-active .corner {
-    @apply border-primary;
+  .spinner {
+    @apply inline-block size-4 rounded-full border-2 border-accent/25 border-t-accent animate-spin;
   }
-
-  .corner-tl { @apply top-1.5 left-1.5 border-t border-l; }
-  .corner-tr { @apply top-1.5 right-1.5 border-t border-r; }
-  .corner-bl { @apply bottom-1.5 left-1.5 border-b border-l; }
-  .corner-br { @apply bottom-1.5 right-1.5 border-b border-r; }
 }

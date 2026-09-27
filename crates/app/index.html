@@ -8,14 +8,16 @@
     </title>
     <meta
       name="description"
-      content="Convert images, documents, spreadsheets and more — entirely in your browser. Your files never leave your device. No uploads, no accounts, no tracking. Free forever, powered by Rust & WebAssembly."
+      content="Convert HEIC, images, audio, Word documents, spreadsheets and more — entirely in your browser. Your files never leave your device. No uploads, no accounts, no tracking. Free forever, powered by Rust & WebAssembly."
     />
     <meta
       name="keywords"
-      content="file converter, private file converter, offline file converter, convert png to jpg, convert markdown to html, convert csv to json, webassembly converter, no upload file converter, secure file conversion, GDPR file converter, browser file converter"
+      content="file converter, private file converter, offline file converter, heic to jpg, convert png to jpg, jpg to pdf, m4a to mp3, wav to mp3, flac to mp3, markdown to docx, docx to pdf, xlsx to csv, csv to excel, json to yaml, webassembly converter, no upload file converter, browser file converter"
     />
     <meta name="author" content="RephlexZero" />
-    <meta name="theme-color" content="#0b0a07" />
+    <meta name="theme-color" content="#faf9f7" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0e0d0c" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
     <link rel="canonical" href="https://transfigure.ing" />
 
     <!-- Open Graph -->
@@ -66,11 +68,13 @@
           "Client-side conversion — files never leave your device",
           "No account required",
           "No usage limits",
-          "Works offline after first visit",
-          "Image conversion: PNG, JPG, WebP, GIF, BMP, TIFF, AVIF, QOI, TGA, ICO",
-          "Document conversion: Markdown, HTML, DOCX, RTF",
-          "Data conversion: CSV, JSON, TSV, YAML, TOML",
-          "Archive output: ZIP, TAR.GZ, TAR.XZ, 7Z",
+          "Converts without a network connection once loaded",
+          "Image conversion: HEIC, JPG, PNG, WebP, AVIF, GIF, BMP, TIFF, ICO, SVG, QOI, TGA, DDS, HDR, EXR, and images to PDF",
+          "Audio conversion: MP3, M4A (AAC/ALAC), WAV, FLAC, OGG, AIFF to MP3, WAV or FLAC",
+          "Document conversion: DOCX, ODT, RTF, PDF, Markdown, HTML and text to PDF, DOCX, HTML, Markdown or text",
+          "Spreadsheets: XLSX, XLS, ODS, CSV, TSV and JSON to XLSX, CSV, JSON or TSV",
+          "Structured data: JSON, YAML, TOML and XML",
+          "Batch output as ZIP, TAR.GZ, TAR.XZ or 7Z",
           "Open source"
         ],
         "author": {
@@ -83,8 +87,9 @@
 
     <link
       rel="icon"
-      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d9a441' stroke-width='1.8'><circle cx='12' cy='12' r='10'/><path d='M12 5.5 18 16.5 H6 Z' stroke-linejoin='round'/><line x1='9' y1='13' x2='15' y2='13'/></svg>"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d98014' stroke-width='2'><circle cx='12' cy='12' r='10'/><path d='M12 5.5 18 16.5 H6 Z' stroke-linejoin='round'/><line x1='9' y1='13' x2='15' y2='13'/></svg>"
     />
+    <link rel="preload" href="/fonts/inter-var.woff2" as="font" type="font/woff2" crossorigin />
     <link data-trunk rel="css" href="tailwind.css" />
     <link data-trunk rel="rust" data-wasm-opt="0" />
     <link data-trunk rel="copy-file" href="_headers" />
@@ -92,10 +97,17 @@
     <link data-trunk rel="copy-file" href="sitemap.xml" />
     <link data-trunk rel="copy-file" href="og.png" />
     <link data-trunk rel="copy-file" href="llms.txt" />
+    <link data-trunk rel="copy-dir" href="fonts" />
   </head>
-  <body class="min-h-screen bg-base-300 text-base-content">
+  <body>
+    <!-- Shown until the WASM app mounts (main.rs removes it). -->
+    <div id="boot" aria-hidden="true" style="min-height:100vh;display:flex;align-items:center;justify-content:center">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#d98014" stroke-width="1.75" style="animation:boot 1.4s ease-in-out infinite"><circle cx="12" cy="12" r="10"/><path d="M12 5.5 18 16.5H6Z" stroke-linejoin="round"/><path d="M9 13h6"/></svg>
+      <style>@keyframes boot{50%{opacity:.35}}</style>
+    </div>
     <noscript>
-      <main style="max-width:640px;margin:3rem auto;padding:0 1.5rem;font-family:ui-monospace,Menlo,Consolas,monospace;color:#e6dfd0;background:#0b0a07;">
+      <style>#boot{display:none!important}</style>
+      <main style="max-width:640px;margin:3rem auto;padding:0 1.5rem;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.6">
         <h1>Transfigure — Free Private File Converter</h1>
         <p>
           Transfigure converts images, documents, spreadsheets, audio and config
@@ -105,12 +117,12 @@
         </p>
         <h2>Supported conversions</h2>
         <ul>
-          <li>Images: PNG, JPG, WebP, GIF, BMP, TIFF, AVIF, QOI, TGA, HDR, DDS, EXR, ICO, SVG → PNG</li>
-          <li>Audio: MP3, FLAC, OGG, WAV → WAV</li>
-          <li>Documents: Markdown ↔ HTML, MD/HTML/TXT → PDF, PDF → TXT/HTML, DOCX → TXT/HTML, RTF → TXT</li>
-          <li>Data: CSV ↔ JSON, CSV ↔ TSV</li>
-          <li>Config: JSON ↔ YAML, JSON ↔ TOML</li>
-          <li>Encoding: Base64 ↔ Binary</li>
+          <li>Images: HEIC, JPG, PNG, WebP, GIF, BMP, TIFF, ICO, SVG, QOI, TGA, DDS, HDR, EXR → JPG, PNG, WebP, AVIF, PDF, GIF, BMP, TIFF, ICO, QOI, TGA</li>
+          <li>Audio: MP3, M4A (AAC/ALAC), AAC, WAV, FLAC, OGG, AIFF, CAF → MP3, WAV, FLAC</li>
+          <li>Documents: DOCX, ODT, RTF, PDF, Markdown, HTML, TXT → PDF, DOCX, HTML, Markdown, TXT</li>
+          <li>Spreadsheets: XLSX, XLS, ODS, CSV, TSV, JSON → XLSX, CSV, JSON, TSV</li>
+          <li>Structured data: JSON ↔ YAML ↔ TOML ↔ XML</li>
+          <li>Encoding: any file ↔ Base64</li>
         </ul>
         <p>
           Batch conversion is supported, with results downloadable individually

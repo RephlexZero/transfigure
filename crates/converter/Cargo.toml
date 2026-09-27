@@ -6,7 +6,7 @@ license-file.workspace = true
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+serde_json = { version = "1", features = ["preserve_order"] }
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "bmp", "webp", "tiff", "avif", "qoi", "tga", "hdr", "dds", "exr"] }
 ico = "0.5"
 rtf-parser = "0.4"
@@ -19,6 +19,26 @@ tar = "0.4"
 flate2 = "1"
 lzma-rs = { version = "0.3", features = ["raw_decoder"] }
 sevenz-rust2 = { version = "0.20", default-features = false, features = ["compress"] }
-symphonia = { version = "0.5", default-features = false, features = ["mp3", "flac", "vorbis", "ogg", "wav", "pcm"] }
+symphonia = { version = "0.5", default-features = false, features = ["mp3", "flac", "vorbis", "ogg", "wav", "pcm", "aac", "alac", "isomp4", "aiff", "caf"] }
 hound = "3"
-lopdf = "0.39"
+lopdf = { version = "0.42", default-features = false }
+# HEIC/HEIF decoding (pure Rust; AGPL-3.0-only, same licence as this project).
+heic = { version = "0.1.6", default-features = false }
+# MP3 and FLAC encoding (pure Rust).
+rusty_mp3 = "0.8"
+flacenc = { version = "0.5", default-features = false }
+# Spreadsheets: read XLSX/XLS/ODS, write XLSX.
+calamine = { version = "0.36", default-features = false }
+rust_xlsxwriter = { version = "0.99", default-features = false }
+# Documents: DOCX writing, HTML to Markdown / text.
+docx-rs = "0.4"
+htmd = "0.5"
+html2text = "0.16"
+quick-xml = "0.41"
+# Structured data.
+toml = "1"
+serde_yaml_ng = "0.10"
+unicode-normalization = "0.1"
+# DDS textures (the image crate dropped its DDS decoder).
+ddsfile = "0.6"
+bcdec_rs = "0.2"

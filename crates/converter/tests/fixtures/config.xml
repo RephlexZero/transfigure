@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config version="3">
+  <title>Transfigure fixture — Café naïve 42</title>
+  <enabled>true</enabled>
+  <tags><tag>a</tag><tag>b</tag></tags>
+  <owner name="Tom"><email>tom@example.com</email></owner>
+</config>

@@ -1,65 +1,70 @@
 /** @type {import('tailwindcss').Config} */
+
+// Colours are CSS custom properties (see input.css) holding space-separated
+// RGB channels, so light/dark themes swap in one place and Tailwind's
+// opacity modifiers (`bg-accent/10`) keep working.
+const token = (name) => `rgb(var(--${name}) / <alpha-value>)`;
+
 module.exports = {
-  content: [
-    "./crates/app/src/**/*.rs",
-    "./crates/app/index.html",
-  ],
+  content: ["./crates/app/src/**/*.rs", "./crates/app/index.html"],
+  darkMode: "media",
   theme: {
     extend: {
       fontFamily: {
+        sans: [
+          "InterVariable",
+          "Inter",
+          "ui-sans-serif",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "Roboto",
+          "sans-serif",
+        ],
         mono: [
+          "JetBrains Mono",
           "ui-monospace",
           "SFMono-Regular",
           "Menlo",
           "Consolas",
-          "Liberation Mono",
           "monospace",
         ],
       },
-      animation: {
-        'stamp-in': 'stamp-in 0.25s cubic-bezier(0.2, 1.4, 0.4, 1) both',
-        'row-in': 'row-in 0.3s ease-out both',
-        'pulse-soft': 'pulse-soft 1.2s ease-in-out infinite',
+      colors: {
+        page: token("page"),
+        surface: token("surface"),
+        sunken: token("sunken"),
+        line: token("line"),
+        "line-strong": token("line-strong"),
+        fg: token("fg"),
+        muted: token("muted"),
+        subtle: token("subtle"),
+        ink: token("ink"),
+        "on-ink": token("on-ink"),
+        accent: token("accent"),
+        "accent-strong": token("accent-strong"),
+        ok: token("ok"),
+        bad: token("bad"),
+      },
+      boxShadow: {
+        card: "0 1px 2px rgb(var(--shadow) / 0.06), 0 8px 24px -8px rgb(var(--shadow) / 0.12)",
+        pop: "0 2px 4px rgb(var(--shadow) / 0.08), 0 16px 40px -12px rgb(var(--shadow) / 0.28)",
       },
       keyframes: {
-        'stamp-in': {
-          '0%': { transform: 'scale(1.6) rotate(-6deg)', opacity: '0' },
-          '100%': { transform: 'scale(1) rotate(0deg)', opacity: '1' },
+        "row-in": {
+          "0%": { transform: "translateY(3px)", opacity: "0" },
+          "100%": { transform: "translateY(0)", opacity: "1" },
         },
-        'row-in': {
-          '0%': { transform: 'translateY(4px)', opacity: '0' },
-          '100%': { transform: 'translateY(0)', opacity: '1' },
+        "fade-in": {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
         },
-        'pulse-soft': {
-          '0%, 100%': { opacity: '1' },
-          '50%': { opacity: '0.35' },
-        },
+      },
+      animation: {
+        "row-in": "row-in 180ms ease-out both",
+        "fade-in": "fade-in 120ms ease-out both",
       },
     },
   },
-  plugins: [require("daisyui")],
-  daisyui: {
-    themes: [
-      {
-        transfigure: {
-          "primary": "#d9a441",
-          "primary-content": "#16130a",
-          "secondary": "#6fae8f",
-          "secondary-content": "#0f1411",
-          "accent": "#c96342",
-          "accent-content": "#160e0a",
-          "neutral": "#1a1712",
-          "neutral-content": "#e6dfd0",
-          "base-100": "#16140f",
-          "base-200": "#100e0a",
-          "base-300": "#0b0a07",
-          "base-content": "#e6dfd0",
-          "info": "#7ba6c9",
-          "success": "#6fae8f",
-          "warning": "#d9a441",
-          "error": "#cf6b57",
-        },
-      },
-    ],
-  },
-}
+  plugins: [],
+};

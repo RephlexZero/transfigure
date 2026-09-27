@@ -6,8 +6,7 @@
     "css:watch": "npx tailwindcss -i ./input.css -o ./crates/app/tailwind.css --watch"
   },
   "devDependencies": {
-    "tailwindcss": "^3",
-    "daisyui": "^4",
-    "autoprefixer": "^10"
+    "autoprefixer": "^10",
+    "tailwindcss": "^3"
   }
 }
