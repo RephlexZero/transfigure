@@ -19,30 +19,18 @@ This is a structural privacy guarantee, not a policy one. There is no server rec
 
 ## Supported conversions
 
-| Category   | Input               | Output formats                          |
-|------------|---------------------|-----------------------------------------|
-| Images     | PNG                 | JPG, WebP, GIF, BMP, TIFF               |
-|            | JPG / JPEG          | PNG, WebP, GIF, BMP, TIFF               |
-|            | WebP                | PNG, JPG, GIF, BMP, TIFF                |
-|            | GIF                 | PNG, JPG, WebP, BMP, TIFF               |
-|            | BMP                 | PNG, JPG, WebP, GIF, TIFF               |
-|            | TIFF / TIF          | PNG, JPG, WebP, GIF, BMP                |
-|            | SVG                 | PNG                                     |
-| Audio      | MP3                 | WAV                                     |
-|            | FLAC                | WAV                                     |
-|            | OGG (Vorbis)        | WAV                                     |
-|            | WAV                 | WAV (normalises to 16-bit PCM)          |
-| Documents  | Markdown (MD)       | HTML, TXT                               |
-|            | HTML                | Markdown                                |
-| Data       | CSV                 | JSON, TSV                               |
-|            | TSV                 | CSV                                     |
-|            | JSON                | CSV, YAML, TOML                         |
-|            | YAML / YML          | JSON                                    |
-|            | TOML                | JSON                                    |
-| Encoding   | Base64              | Binary (decoded)                        |
-|            | Any file            | Base64 (encoded)                        |
+| Category        | Input                                              | Output                                         |
+|-----------------|----------------------------------------------------|------------------------------------------------|
+| Images          | HEIC/HEIF, JPG, PNG, WebP, GIF, BMP, TIFF, ICO, SVG, QOI, TGA, DDS (BC1–BC7), HDR, EXR | JPG, PNG, WebP, AVIF, PDF, GIF, BMP, TIFF, ICO, QOI, TGA |
+| Audio           | MP3, M4A (AAC/ALAC), AAC, WAV, FLAC, OGG, AIFF, CAF | MP3, WAV, FLAC                                 |
+| Documents       | DOCX, ODT, RTF, PDF (text), Markdown, HTML, TXT    | PDF, DOCX, HTML, Markdown, TXT                 |
+| Spreadsheets    | XLSX, XLS, ODS, CSV, TSV, JSON records             | XLSX, CSV, JSON, TSV                           |
+| Structured data | JSON, YAML, TOML, XML                              | JSON, YAML, TOML, XML                          |
+| Encoding        | Any file / Base64                                  | Base64 / original bytes                        |
 
-Batch conversion is supported — drop multiple files at once and convert them all in a single click. Converted files can be downloaded individually or packaged as a ZIP, tar.gz, or tar.xz archive.
+Documents go through one shared model (headings, emphasis, links, lists, quotes, code, tables), so every document input converts to every document output. JPEG and HEIC photos are rotated according to their EXIF orientation. Lossless audio keeps its bit depth; the quality slider sets JPG/AVIF quality and MP3 bitrate.
+
+Batch conversion is supported — drop multiple files at once and convert them all in a single click. Converted files can be downloaded individually or packaged as a ZIP, tar.gz, tar.xz or 7z archive (duplicate names get numbered).
 
 ---
 
@@ -54,7 +42,10 @@ Batch conversion is supported — drop multiple files at once and convert them a
 | Styling    | [Tailwind CSS v3](https://tailwindcss.com/), self-hosted Inter + JetBrains Mono |
 | Build      | [Trunk](https://trunkrs.dev/)                                |
 | Conversion | Pure Rust compiled to WebAssembly via `wasm-bindgen`         |
-| Audio      | [`symphonia`](https://github.com/pdeljanov/Symphonia) (decode) + [`hound`](https://github.com/ruuda/hound) (WAV encode) |
+| Images     | [`image`](https://github.com/image-rs/image), [`heic`](https://github.com/imazen/heic) (HEIC), [`resvg`](https://github.com/linebender/resvg) (SVG), [`bcdec_rs`](https://crates.io/crates/bcdec_rs) (DDS) |
+| Audio      | [`symphonia`](https://github.com/pdeljanov/Symphonia) (decode), [`hound`](https://github.com/ruuda/hound) (WAV), [`flacenc`](https://github.com/yotarok/flacenc-rs) (FLAC), [`rusty_mp3`](https://crates.io/crates/rusty_mp3) (MP3) |
+| Documents  | [`comrak`](https://github.com/kivikakk/comrak), [`htmd`](https://github.com/letmutex/htmd), [`docx-rs`](https://github.com/bokuweb/docx-rs), [`lopdf`](https://github.com/J-F-Liu/lopdf), and a built-in PDF layout engine |
+| Data       | [`calamine`](https://github.com/tafia/calamine), [`rust_xlsxwriter`](https://github.com/jmcnamara/rust_xlsxwriter), [`serde_yaml_ng`](https://github.com/acatton/serde-yaml-ng), [`toml`](https://github.com/toml-rs/toml), [`quick-xml`](https://github.com/tafia/quick-xml) |
 | Hosting    | [Cloudflare Pages](https://pages.cloudflare.com/)            |
 | CI/CD      | GitHub Actions                                               |
 
@@ -69,12 +60,18 @@ transfigure/
 │   │   ├── src/utils.rs    # Download/format helpers
 │   │   └── index.html      # Entry point for Trunk
 │   └── converter/      # Conversion engine (no WASM dependencies)
-│       └── src/
-│           ├── lib.rs          # Public API: convert(), get_output_formats()
-│           ├── image_conv.rs   # Image conversions via the `image` crate + resvg
-│           ├── document.rs     # Markdown, HTML, YAML, TOML, Base64
-│           ├── spreadsheet.rs  # CSV / TSV / JSON
-│           └── archive.rs      # ZIP, tar.gz, tar.xz output
+│       ├── src/
+│       │   ├── lib.rs          # Public API: convert(), get_output_formats()
+│       │   ├── image_conv.rs   # Images (image crate, HEIC, SVG, ICO, image → PDF)
+│       │   ├── dds.rs          # DDS textures (BC1–BC7, uncompressed)
+│       │   ├── audio.rs        # Decode (symphonia), encode WAV / FLAC / MP3
+│       │   ├── doc/            # Document model + readers and writers per format
+│       │   ├── pdf.rs          # PDF writer: text layout and image pages
+│       │   ├── table.rs        # CSV / TSV / XLSX / XLS / ODS / JSON records
+│       │   ├── structured.rs   # JSON / YAML / TOML / XML
+│       │   └── archive.rs      # ZIP, tar.gz, tar.xz, 7z output
+│       ├── tests/matrix.rs     # Runs every offered conversion on real fixtures
+│       └── tests/fixtures/     # Fixtures made by ffmpeg, LibreOffice, Pillow (generate.py)
 ├── input.css           # Tailwind source
 ├── Trunk.toml          # Trunk build config
 ├── Cargo.toml          # Workspace manifest
@@ -115,13 +112,22 @@ trunk build --release
 
 Output is written to `dist/`. The `--release` profile applies `opt-level = "z"`, LTO, and stripping to minimise the WASM binary size.
 
-### Check the converter crate
+### Test the converter
 
-The converter crate has no WASM dependencies and can be checked/tested on the native toolchain:
+The converter crate has no WASM dependencies and is tested natively. `tests/matrix.rs` runs every conversion the UI offers against fixtures produced by other tools and checks each output decodes correctly:
 
 ```sh
-cargo check -p converter
 cargo test -p converter
+# Keep every output for inspection with external tools:
+TRANSFIGURE_DUMP=/tmp/out cargo test -p converter --test matrix
+# Try a single conversion:
+cargo run -p converter --example convert -- photo.heic heic jpg photo.jpg
+```
+
+Fixtures are regenerated with [uv](https://docs.astral.sh/uv/) (Python tooling is linted with `ruff` and type-checked with `ty`):
+
+```sh
+uv run crates/converter/tests/fixtures/generate.py
 ```
 
 ---

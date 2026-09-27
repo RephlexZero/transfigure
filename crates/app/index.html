@@ -8,11 +8,11 @@
     </title>
     <meta
       name="description"
-      content="Convert images, documents, spreadsheets and more — entirely in your browser. Your files never leave your device. No uploads, no accounts, no tracking. Free forever, powered by Rust & WebAssembly."
+      content="Convert HEIC, images, audio, Word documents, spreadsheets and more — entirely in your browser. Your files never leave your device. No uploads, no accounts, no tracking. Free forever, powered by Rust & WebAssembly."
     />
     <meta
       name="keywords"
-      content="file converter, private file converter, offline file converter, convert png to jpg, convert markdown to html, convert csv to json, webassembly converter, no upload file converter, secure file conversion, GDPR file converter, browser file converter"
+      content="file converter, private file converter, offline file converter, heic to jpg, convert png to jpg, jpg to pdf, m4a to mp3, wav to mp3, flac to mp3, markdown to docx, docx to pdf, xlsx to csv, csv to excel, json to yaml, webassembly converter, no upload file converter, browser file converter"
     />
     <meta name="author" content="RephlexZero" />
     <meta name="theme-color" content="#faf9f7" media="(prefers-color-scheme: light)" />
@@ -68,11 +68,13 @@
           "Client-side conversion — files never leave your device",
           "No account required",
           "No usage limits",
-          "Works offline after first visit",
-          "Image conversion: PNG, JPG, WebP, GIF, BMP, TIFF, AVIF, QOI, TGA, ICO",
-          "Document conversion: Markdown, HTML, DOCX, RTF",
-          "Data conversion: CSV, JSON, TSV, YAML, TOML",
-          "Archive output: ZIP, TAR.GZ, TAR.XZ, 7Z",
+          "Converts without a network connection once loaded",
+          "Image conversion: HEIC, JPG, PNG, WebP, AVIF, GIF, BMP, TIFF, ICO, SVG, QOI, TGA, DDS, HDR, EXR, and images to PDF",
+          "Audio conversion: MP3, M4A (AAC/ALAC), WAV, FLAC, OGG, AIFF to MP3, WAV or FLAC",
+          "Document conversion: DOCX, ODT, RTF, PDF, Markdown, HTML and text to PDF, DOCX, HTML, Markdown or text",
+          "Spreadsheets: XLSX, XLS, ODS, CSV, TSV and JSON to XLSX, CSV, JSON or TSV",
+          "Structured data: JSON, YAML, TOML and XML",
+          "Batch output as ZIP, TAR.GZ, TAR.XZ or 7Z",
           "Open source"
         ],
         "author": {
@@ -115,12 +117,12 @@
         </p>
         <h2>Supported conversions</h2>
         <ul>
-          <li>Images: PNG, JPG, WebP, GIF, BMP, TIFF, AVIF, QOI, TGA, HDR, DDS, EXR, ICO, SVG → PNG</li>
-          <li>Audio: MP3, FLAC, OGG, WAV → WAV</li>
-          <li>Documents: Markdown ↔ HTML, MD/HTML/TXT → PDF, PDF → TXT/HTML, DOCX → TXT/HTML, RTF → TXT</li>
-          <li>Data: CSV ↔ JSON, CSV ↔ TSV</li>
-          <li>Config: JSON ↔ YAML, JSON ↔ TOML</li>
-          <li>Encoding: Base64 ↔ Binary</li>
+          <li>Images: HEIC, JPG, PNG, WebP, GIF, BMP, TIFF, ICO, SVG, QOI, TGA, DDS, HDR, EXR → JPG, PNG, WebP, AVIF, PDF, GIF, BMP, TIFF, ICO, QOI, TGA</li>
+          <li>Audio: MP3, M4A (AAC/ALAC), AAC, WAV, FLAC, OGG, AIFF, CAF → MP3, WAV, FLAC</li>
+          <li>Documents: DOCX, ODT, RTF, PDF, Markdown, HTML, TXT → PDF, DOCX, HTML, Markdown, TXT</li>
+          <li>Spreadsheets: XLSX, XLS, ODS, CSV, TSV, JSON → XLSX, CSV, JSON, TSV</li>
+          <li>Structured data: JSON ↔ YAML ↔ TOML ↔ XML</li>
+          <li>Encoding: any file ↔ Base64</li>
         </ul>
         <p>
           Batch conversion is supported, with results downloadable individually

@@ -18,12 +18,12 @@ there is nothing to call or crawl beyond the page itself.
 
 ## Supported conversions
 
-- Images: PNG, JPG, WebP, GIF, BMP, TIFF, AVIF, QOI, TGA, HDR, DDS, EXR, ICO, SVG → PNG
-- Audio: MP3, FLAC, OGG, WAV → WAV
-- Documents: Markdown ↔ HTML, MD/HTML/TXT → PDF, PDF → TXT/HTML, DOCX → TXT/HTML, RTF → TXT
-- Data: CSV ↔ JSON, CSV ↔ TSV
-- Config: JSON ↔ YAML, JSON ↔ TOML
-- Encoding: Base64 ↔ Binary
+- Images: HEIC/HEIF (iPhone photos), JPG, PNG, WebP, GIF, BMP, TIFF, ICO, SVG, QOI, TGA, DDS, HDR, EXR → JPG, PNG, WebP, AVIF, PDF, GIF, BMP, TIFF, ICO, QOI, TGA (EXIF orientation applied)
+- Audio: MP3, M4A (AAC and ALAC), AAC, WAV, FLAC, OGG Vorbis, AIFF, CAF → MP3, WAV, FLAC
+- Documents: DOCX, ODT, RTF, PDF (text extraction), Markdown, HTML, TXT → PDF, DOCX, HTML, Markdown, TXT, preserving headings, emphasis, links, lists and tables
+- Spreadsheets: XLSX, XLS, ODS, CSV (comma or semicolon), TSV, JSON records → XLSX, CSV, JSON, TSV
+- Structured data: JSON ↔ YAML ↔ TOML ↔ XML
+- Encoding: any file ↔ Base64
 - Batch output: ZIP, TAR.GZ, TAR.XZ, 7Z
 
 ## Docs

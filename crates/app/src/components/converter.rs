@@ -13,9 +13,10 @@ use crate::utils::{
     make_output_name, next_tick,
 };
 
-/// Output formats that take a lossy quality setting.
+/// Output formats that take a lossy quality setting (for MP3 it sets the
+/// bitrate).
 fn is_lossy_target(fmt: &str) -> bool {
-    matches!(fmt, "jpg" | "jpeg" | "avif")
+    matches!(fmt, "jpg" | "jpeg" | "avif" | "mp3")
 }
 
 const ARCHIVE_FORMATS: [(&str, &str); 4] = [
@@ -30,7 +31,8 @@ fn plural(n: usize, one: &str, many: &str) -> String {
 }
 
 /// Read every file in a `FileList` and hand them over together once all
-/// have loaded, so a dropped batch lands in one update.
+/// have loaded, in the order given (reads finish in any order), so a dropped
+/// batch lands in one update.
 fn read_files(
     file_list: web_sys::FileList,
     add: impl Fn(Vec<(String, Vec<u8>)>) + Clone + 'static,
@@ -54,13 +56,14 @@ fn read_files(
             let name = file.name();
             if let Ok(buf) = JsFuture::from(file.array_buffer()).await {
                 let array = js_sys::Uint8Array::new(&buf);
-                collected.borrow_mut().push((name, array.to_vec()));
+                collected.borrow_mut().push((i, name, array.to_vec()));
             }
             let left = remaining.get() - 1;
             remaining.set(left);
             if left == 0 {
-                let items = collected.borrow_mut().drain(..).collect();
-                add(items);
+                let mut items: Vec<_> = collected.borrow_mut().drain(..).collect();
+                items.sort_by_key(|(i, _, _)| *i);
+                add(items.into_iter().map(|(_, n, b)| (n, b)).collect());
             }
         });
     }
@@ -622,7 +625,7 @@ fn EmptyState(open_picker: impl Fn() + Copy + Send + 'static) -> impl IntoView {
                     <kbd class="kbd">"V"</kbd>
                 </p>
                 <p class="mt-8 max-w-md text-xs leading-relaxed text-subtle text-balance">
-                    "PNG, JPG, WebP, SVG, MP3, FLAC, Markdown, PDF, DOCX, CSV, JSON, YAML, TOML and more"
+                    "HEIC, JPG, PNG, WebP, SVG, MP3, M4A, FLAC, DOCX, PDF, XLSX, CSV, JSON and more"
                 </p>
             </div>
         </div>
@@ -701,7 +704,7 @@ fn OptionsBar(
                             max="100"
                             step="5"
                             class="range flex-1"
-                            aria-label="Quality for JPG and AVIF output"
+                            aria-label="Quality for JPG, AVIF and MP3 output"
                             prop:value=move || quality.get().to_string()
                             prop:disabled=move || is_converting.get()
                             on:input=move |ev| {

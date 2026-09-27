@@ -7,7 +7,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 license = "AGPL-3.0-only"
 license-file = "LICENSE"
@@ -17,3 +17,8 @@ opt-level = "z"
 lto = true
 codegen-units = 1
 strip = true
+
+# Image and audio codecs are unusably slow unoptimised (AVIF encoding, HEIC
+# decoding); optimise dependencies even in dev builds and tests.
+[profile.dev.package."*"]
+opt-level = 2

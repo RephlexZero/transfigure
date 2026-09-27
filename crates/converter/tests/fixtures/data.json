@@ -1,0 +1,23 @@
+[
+  {
+    "id": 1,
+    "name": "Café",
+    "zip": "00501",
+    "price": 9.99,
+    "note": "plain"
+  },
+  {
+    "id": 2,
+    "name": "Naïve, Inc.",
+    "zip": "10001",
+    "price": 12.0,
+    "note": "has \"quotes\""
+  },
+  {
+    "id": 3,
+    "name": "Ωmega",
+    "zip": "02134",
+    "price": 0.5,
+    "note": ""
+  }
+]

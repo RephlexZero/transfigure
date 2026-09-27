@@ -164,44 +164,44 @@ pub fn Formats() -> impl IntoView {
                     <FormatCard
                         cat=Category::Image
                         title="Images"
-                        text="Convert between raster formats, encode AVIF, and render SVG to PNG."
-                        from=&["PNG", "JPG", "WebP", "GIF", "BMP", "TIFF", "ICO", "QOI", "TGA", "HDR", "DDS", "EXR", "SVG"]
-                        to=&["PNG", "JPG", "WebP", "AVIF", "GIF", "BMP", "TIFF", "QOI", "TGA", "ICO"]
+                        text="Open iPhone HEIC photos, convert between raster formats, encode AVIF, rasterise SVG, and turn any image into a PDF. Photo orientation is kept."
+                        from=&["HEIC", "JPG", "PNG", "WebP", "GIF", "BMP", "TIFF", "ICO", "SVG", "QOI", "TGA", "DDS", "HDR", "EXR"]
+                        to=&["JPG", "PNG", "WebP", "AVIF", "PDF", "GIF", "BMP", "TIFF", "ICO", "QOI", "TGA"]
                     />
                     <FormatCard
                         cat=Category::Audio
                         title="Audio"
-                        text="Decode compressed audio to uncompressed 16-bit PCM."
-                        from=&["MP3", "FLAC", "OGG", "WAV"]
-                        to=&["WAV"]
+                        text="Convert songs and recordings between MP3, WAV and FLAC, including Apple M4A (AAC and ALAC). Lossless sources keep their bit depth."
+                        from=&["MP3", "M4A", "AAC", "WAV", "FLAC", "OGG", "AIFF", "CAF"]
+                        to=&["MP3", "WAV", "FLAC"]
                     />
                     <FormatCard
                         cat=Category::Document
                         title="Documents"
-                        text="Markdown and HTML both ways, text to PDF, and plain text out of PDF, DOCX and RTF."
-                        from=&["MD", "HTML", "TXT", "PDF", "DOCX", "RTF"]
-                        to=&["HTML", "MD", "TXT", "PDF"]
+                        text="Word, OpenDocument, RTF, Markdown and HTML with headings, lists, links and tables intact. PDFs are converted by extracting their text."
+                        from=&["DOCX", "ODT", "RTF", "PDF", "MD", "HTML", "TXT"]
+                        to=&["PDF", "DOCX", "HTML", "MD", "TXT"]
                     />
                     <FormatCard
                         cat=Category::Data
-                        title="Data"
-                        text="Tables between CSV, TSV and JSON arrays of objects."
-                        from=&["CSV", "TSV", "JSON"]
-                        to=&["JSON", "CSV", "TSV"]
+                        title="Spreadsheets"
+                        text="Excel and OpenDocument sheets to CSV or JSON, and back to XLSX. Column order and leading zeros survive; semicolon CSVs are detected."
+                        from=&["XLSX", "XLS", "ODS", "CSV", "TSV", "JSON"]
+                        to=&["XLSX", "CSV", "JSON", "TSV"]
                     />
                     <FormatCard
                         cat=Category::Config
-                        title="Config"
-                        text="Translate configuration files between JSON, YAML and TOML."
-                        from=&["JSON", "YAML", "TOML"]
-                        to=&["JSON", "YAML", "TOML"]
+                        title="Structured data"
+                        text="Translate configuration and data files between JSON, YAML, TOML and XML, nested structures included."
+                        from=&["JSON", "YAML", "TOML", "XML"]
+                        to=&["JSON", "YAML", "TOML", "XML"]
                     />
                     <FormatCard
                         cat=Category::Encoding
                         title="Encoding"
-                        text="Encode any file as Base64 text, or decode Base64 back to binary."
+                        text="Encode any file as Base64 text, or decode Base64 back to the original file."
                         from=&["Any file", "Base64"]
-                        to=&["Base64", "Binary"]
+                        to=&["Base64", "Original file"]
                     />
                 </div>
 
@@ -272,6 +272,16 @@ pub fn Faq() -> impl IntoView {
                     </FaqItem>
                     <FaqItem q="What happens to my files when I close the tab?">
                         "They're gone. Nothing is written to storage or kept between visits."
+                    </FaqItem>
+                    <FaqItem q="Can it convert iPhone photos?">
+                        "Yes. HEIC and HEIF photos convert to JPG, PNG, WebP or PDF, the right "
+                        "way up. Drop a whole camera-roll export at once."
+                    </FaqItem>
+                    <FaqItem q="What can't it do?">
+                        "Video isn't supported. PDFs are converted by extracting their text, so "
+                        "page layout and pictures aren't kept, and scanned pages have no text to "
+                        "extract. PDF output uses built-in fonts that cover Western European "
+                        "languages."
                     </FaqItem>
                     <FaqItem q="Is it free?">
                         "Yes. There are no accounts, usage caps or paid tiers. The source is "

@@ -1,0 +1,21 @@
+# comment
+title = "Transfigure fixture — Café naïve 42"
+version = 3
+enabled = true
+ratio = 0.75
+tags = ["a", "b", "c"]
+empty_list = []
+tricky = "yes: no # not a comment"
+numeric_string = "007"
+
+[owner]
+name = "Tom"
+email = "tom@example.com"
+
+[[servers]]
+host = "alpha"
+port = 8001
+
+[[servers]]
+host = "beta"
+port = 8002
