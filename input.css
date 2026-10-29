@@ -5,11 +5,25 @@
 /* ── Fonts (self-hosted: the CSP only allows font-src 'self') ── */
 
 @font-face {
-  font-family: "InterVariable";
+  font-family: "Bricolage Grotesque";
   font-style: normal;
-  font-weight: 100 900;
+  font-weight: 200 800;
   font-display: swap;
-  src: url("/fonts/inter-var.woff2") format("woff2");
+  src: url("/fonts/bricolage-grotesque-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Bricolage Grotesque";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("/fonts/bricolage-grotesque-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0,
+    U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
 @font-face {
@@ -20,63 +34,81 @@
   src: url("/fonts/jetbrains-mono-var.woff2") format("woff2");
 }
 
-/* ── Theme tokens ─────────────────────────────────── */
+/* ── Theme tokens ─────────────────────────────────────
+   Paper, ink and two spot colours. Source (blue) marks what you have,
+   result (red) marks what you get; nothing else is coloured. The plain
+   spots are for large type, fills and rules; the -ink variants are the
+   darker shades that pass 4.5:1 for small text on paper. */
 
 @layer base {
   :root {
     color-scheme: light;
-    --page: 250 249 247;
-    --surface: 255 255 255;
-    --sunken: 245 244 241;
-    --line: 231 228 223;
-    --line-strong: 212 208 202;
-    --fg: 28 25 23;
-    --muted: 87 83 78;
-    --subtle: 128 122 116;
-    --ink: 28 25 23;
-    --on-ink: 255 255 255;
-    --accent: 217 128 20;
-    --accent-strong: 170 90 8;
-    --ok: 21 128 61;
-    --bad: 190 40 40;
-    --shadow: 41 37 36;
+    --paper: 239 235 227; /* #EFEBE3 */
+    --paper-2: 230 224 213; /* #E6E0D5 */
+    --rule: 204 197 184; /* #CCC5B8 */
+    --ink: 24 23 28; /* #18171C  15.0:1 on paper */
+    --ink-2: 87 83 77; /* #57534D   6.4:1 */
+    --src: 0 120 191; /* #0078BF   4.0:1 */
+    --src-ink: 0 96 154; /* #00609A   5.6:1 */
+    --res: 232 71 60; /* #E8473C   3.3:1, ink on it 4.6:1 */
+    --res-ink: 184 41 31; /* #B8291F   5.2:1 */
+    --on-src: 239 235 227;
+    --on-res: 24 23 28;
+    --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%2357534D' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4.5 6.5 3.5 3.5 3.5-3.5'/%3E%3C/svg%3E");
+    /* Size of the giant extension; everything in the specimen scales off
+       it. On phones it takes most of the width, beside the queue less. */
+    --specimen: clamp(5.75rem, 25vw, 9rem);
+    /* Size of the first output format under it; the rest step down. */
+    --pick: clamp(2rem, 9vw, 3rem);
+  }
+
+  @media (min-width: 640px) {
+    :root {
+      --specimen: clamp(8rem, 21vw, 13rem);
+      --pick: clamp(2.5rem, 6vw, 3.5rem);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    :root {
+      --specimen: clamp(10rem, 17vw, 18.5rem);
+      --pick: clamp(3rem, 5.4vw, 5.25rem);
+    }
   }
 
   @media (prefers-color-scheme: dark) {
+    /* Inks lifted for a dark ground and screen-blended instead of
+       multiplied; every colour here is at least 6.5:1 on the ground. */
     :root {
       color-scheme: dark;
-      --page: 14 13 12;
-      --surface: 24 22 20;
-      --sunken: 19 18 16;
-      --line: 44 41 38;
-      --line-strong: 64 60 56;
-      --fg: 240 238 234;
-      --muted: 172 166 160;
-      --subtle: 124 118 112;
-      --ink: 240 238 234;
-      --on-ink: 24 22 20;
-      --accent: 240 166 60;
-      --accent-strong: 246 190 110;
-      --ok: 110 205 140;
-      --bad: 245 125 115;
-      --shadow: 0 0 0;
+      --paper: 22 21 26; /* #16151A */
+      --paper-2: 32 31 37; /* #201F25 */
+      --rule: 54 52 60; /* #36343C */
+      --ink: 236 231 221; /* #ECE7DD */
+      --ink-2: 169 163 154; /* #A9A39A */
+      --src: 74 168 240; /* #4AA8F0 */
+      --src-ink: 74 168 240;
+      --res: 255 107 94; /* #FF6B5E */
+      --res-ink: 255 107 94;
+      --on-src: 22 21 26;
+      --on-res: 22 21 26;
+      --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23A9A39A' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4.5 6.5 3.5 3.5 3.5-3.5'/%3E%3C/svg%3E");
     }
   }
 
   html {
-    @apply bg-page text-fg font-sans antialiased;
-    font-feature-settings: "cv11", "ss03";
+    @apply bg-paper text-ink font-sans antialiased;
     text-rendering: optimizeLegibility;
     scroll-behavior: smooth;
-    scroll-padding-top: 5rem;
+    scroll-padding-top: 1.5rem;
   }
 
   ::selection {
-    @apply bg-accent/25;
+    @apply bg-src/25;
   }
 
   :focus-visible {
-    @apply outline-none ring-2 ring-accent/70 ring-offset-2 ring-offset-page;
+    @apply outline-none ring-2 ring-src ring-offset-2 ring-offset-paper;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -87,124 +119,228 @@
     *::before,
     *::after {
       animation-duration: 1ms !important;
+      animation-iteration-count: 1 !important;
       transition-duration: 1ms !important;
     }
   }
 }
 
 @layer components {
-  /* ── Buttons ─────────────────────────────────────── */
-
-  .btn {
-    @apply inline-flex items-center justify-center gap-2 h-9 px-3.5 rounded-lg
-      text-sm font-medium whitespace-nowrap select-none
-      transition-[background-color,border-color,color,box-shadow,transform] duration-150
-      disabled:pointer-events-none disabled:opacity-45;
+  .wrap {
+    @apply mx-auto w-full max-w-page px-4 sm:px-6 lg:px-12;
   }
 
-  .btn:active {
-    transform: translateY(0.5px);
+  /* ── Buttons ─────────────────────────────────────────
+     Filled buttons sit on a slightly off-register shadow in the other ink:
+     hover lifts away from it, press lands on it. */
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 h-11 px-5 rounded
+      text-[15px] font-semibold whitespace-nowrap select-none
+      transition-[transform,box-shadow,background-color,color,border-color] duration-150 ease-settle
+      disabled:pointer-events-none;
   }
 
   .btn-lg {
-    @apply h-11 px-5 text-[15px] rounded-xl;
+    @apply h-14 px-6 text-lg font-bold tracking-[-0.01em];
   }
 
-  .btn-sm {
-    @apply h-8 px-2.5 text-[13px] rounded-md;
+  .btn-res,
+  .btn-ink {
+    box-shadow: -3px 3px 0 rgb(var(--src));
   }
 
-  .btn-primary {
-    @apply bg-ink text-on-ink shadow-sm hover:bg-ink/85;
+  .btn-res {
+    @apply bg-res text-on-res;
   }
 
-  .btn-secondary {
-    @apply bg-surface text-fg border border-line-strong shadow-sm
-      hover:bg-sunken hover:border-line-strong;
+  .btn-ink {
+    @apply bg-ink text-paper;
   }
 
-  .btn-ghost {
-    @apply text-muted hover:text-fg hover:bg-fg/[0.05];
+  .btn-res:hover,
+  .btn-ink:hover {
+    transform: translate(1px, -1px);
+    box-shadow: -4px 4px 0 rgb(var(--src));
+  }
+
+  .btn-res:active,
+  .btn-ink:active {
+    transform: translate(-2px, 2px);
+    box-shadow: -1px 1px 0 rgb(var(--src));
+  }
+
+  .btn-res:disabled,
+  .btn-ink:disabled {
+    @apply bg-paper-2 text-ink-2;
+    box-shadow: none;
+  }
+
+  .btn-line {
+    @apply border-[1.5px] border-ink text-ink hover:bg-paper-2;
+  }
+
+  /* Small monospace text buttons: "+ add", "clear". */
+  .btn-text {
+    @apply inline-flex items-center gap-1.5 h-9 px-2 rounded font-mono text-[13px] text-ink-2
+      transition-colors hover:text-ink hover:bg-paper-2
+      disabled:pointer-events-none disabled:opacity-50;
   }
 
   .icon-btn {
-    @apply inline-flex items-center justify-center size-8 rounded-md text-subtle
-      transition-colors hover:text-fg hover:bg-fg/[0.06]
+    @apply inline-flex items-center justify-center size-9 shrink-0 rounded text-ink-2
+      transition-colors hover:text-ink hover:bg-paper-2
       disabled:pointer-events-none disabled:opacity-40;
   }
 
-  /* ── Form controls ───────────────────────────────── */
+  .nav-link {
+    @apply inline-flex items-center h-9 font-mono text-[13px] text-ink-2 transition-colors hover:text-ink;
+  }
+
+  /* ── Form controls ─────────────────────────────────── */
 
   /* Native <select> with a drawn chevron, so it stays accessible and gets
-     the platform picker on mobile. */
+     the platform picker on mobile. Formats read as ".jpg" in result ink. */
   .select {
-    @apply appearance-none h-8 pl-2.5 pr-7 rounded-md border border-line-strong
-      bg-surface text-[13px] font-medium font-mono uppercase text-fg cursor-pointer
-      transition-colors hover:border-subtle disabled:opacity-50 disabled:cursor-default;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23807a74' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4.5 6.5 3.5 3.5 3.5-3.5'/%3E%3C/svg%3E");
+    @apply appearance-none h-9 pl-2.5 pr-7 rounded border border-rule bg-paper
+      font-mono text-[13px] font-semibold text-res-ink cursor-pointer
+      transition-colors hover:border-ink-2 disabled:opacity-50 disabled:cursor-default;
+    background-image: var(--chevron);
     background-repeat: no-repeat;
     background-position: right 0.4rem center;
     background-size: 14px;
   }
 
-  .range {
-    @apply w-full h-1.5 cursor-pointer;
-    accent-color: rgb(var(--accent));
+  .select-plain {
+    @apply text-ink;
   }
 
-  /* ── Surfaces ────────────────────────────────────── */
-
-  .card {
-    @apply bg-surface border border-line rounded-2xl shadow-card;
+  .range {
+    @apply w-full h-1.5 cursor-pointer disabled:cursor-default;
+    accent-color: rgb(var(--res));
   }
 
   .kbd {
-    @apply inline-flex items-center h-5 px-1.5 rounded border border-line-strong
-      bg-sunken font-mono text-[11px] text-muted leading-none;
+    @apply inline-flex items-center h-5 px-1.5 rounded border border-rule border-b-2
+      bg-paper-2 font-mono text-[11px] text-ink-2 leading-none;
   }
 
-  /* Small monospace format label, e.g. PNG. */
-  .fmt {
-    @apply inline-flex items-center h-6 px-2 rounded-md bg-sunken border border-line
-      font-mono text-[11px] font-medium uppercase tracking-wide text-muted;
+  .label {
+    @apply font-mono text-xs text-ink-2;
   }
 
-  .eyebrow {
-    @apply text-[13px] font-medium text-accent-strong;
+  /* Tints are dots, never transparency. */
+  .halftone {
+    background-image: radial-gradient(circle, rgb(var(--src)) 30%, transparent 33%);
+    background-size: 7px 7px;
+  }
+
+  .halftone-soft {
+    background-image: radial-gradient(circle, rgb(var(--src) / 0.5) 17%, transparent 20%);
+    background-size: 10px 10px;
   }
 
   .section-title {
-    @apply text-2xl sm:text-3xl font-semibold tracking-tight text-fg;
+    @apply font-extrabold tracking-[-0.045em] leading-[0.95] text-balance;
+    font-size: clamp(3rem, 6.4vw, 5.75rem);
   }
 
-  /* ── Drop zone ───────────────────────────────────── */
+  /* ── The specimen: the current file's extension, set huge ─── */
 
-  .dropzone {
-    @apply relative flex flex-col items-center justify-center text-center
-      rounded-xl border-[1.5px] border-dashed border-line-strong bg-sunken/60
-      cursor-pointer transition-colors duration-150
-      hover:border-accent/60 hover:bg-accent/[0.04];
+  .specimen-stage {
+    @apply relative flex items-end overflow-hidden isolate;
+    height: calc(var(--specimen) * 1.14);
+    padding-bottom: calc(var(--specimen) * 0.06);
   }
 
-  /* ── File rows ───────────────────────────────────── */
-
-  .file-row {
-    @apply grid items-center gap-x-3 gap-y-2 px-4 sm:px-5 py-3 animate-row-in;
-    grid-template-columns: 2.25rem minmax(0, 1fr) auto;
+  .specimen-type {
+    @apply font-extrabold whitespace-nowrap;
+    font-size: calc(var(--specimen) * var(--ext-scale, 1));
+    line-height: 1;
+    letter-spacing: -0.05em;
   }
 
-  /* Controls wrap under the file name on phones. */
-  .file-row-controls {
-    @apply col-span-full flex items-center gap-2 justify-end pl-12;
+  /* An unfilled outline that fills with source-ink dots on hover. */
+  .specimen-outline {
+    color: transparent;
+    -webkit-text-stroke: max(1.5px, 0.007em) rgb(var(--ink));
   }
 
-  @media (min-width: 640px) {
-    .file-row-controls {
-      @apply col-auto pl-0;
-    }
+  .specimen-dots {
+    color: transparent;
+    background-image: radial-gradient(circle, rgb(var(--src)) 30%, transparent 34%);
+    background-size: 0.04em 0.04em;
+    -webkit-background-clip: text;
+    background-clip: text;
   }
 
-  .spinner {
-    @apply inline-block size-4 rounded-full border-2 border-accent/25 border-t-accent animate-spin;
+  /* Cap height, x-height and baseline drawn through the specimen. The
+     marker sits on the baseline after the last glyph, so the em/cap/ex
+     offsets resolve against the specimen's own font metrics. */
+  .guides {
+    @apply relative inline-block w-0 h-0 align-baseline pointer-events-none;
+  }
+
+  .guide {
+    @apply absolute;
+    left: -100vw;
+    width: 200vw;
+    border-top: 1px solid rgb(var(--res));
+  }
+
+  .guide-at {
+    @apply absolute left-0 w-0 h-0;
+  }
+
+  .at-cap {
+    top: -0.7em;
+    top: -1cap;
+  }
+
+  .at-x {
+    top: -0.5em;
+    top: -1ex;
+  }
+
+  .at-base {
+    top: 0;
+  }
+
+  .guide.at-x {
+    border-top-style: dashed;
+  }
+
+  .guide.at-base {
+    border-top-width: 1.5px;
+  }
+
+  .guide-label {
+    @apply absolute left-4 bottom-1 whitespace-nowrap font-mono font-medium text-res-ink;
+    font-size: 11px;
+    line-height: 1;
+    letter-spacing: 0;
+  }
+
+  /* Output formats under the specimen, largest first. */
+  .pick {
+    @apply inline-flex items-baseline min-h-11 px-0.5 rounded font-bold leading-none
+      tracking-[-0.04em] text-ink-2 transition-colors duration-150 hover:text-ink
+      disabled:pointer-events-none;
+  }
+
+  .pick[aria-pressed="true"] {
+    @apply text-res;
+  }
+
+  /* ── Queue rows ────────────────────────────────────── */
+
+  .queue-row {
+    @apply grid items-center gap-x-3 min-h-[3.5rem] py-1.5 pr-1 border-b border-rule
+      animate-settle transition-colors;
+    grid-template-columns: 1.75rem minmax(0, 1fr) auto auto;
+  }
+
+  .queue-row[aria-current="true"] {
+    @apply bg-paper-2;
   }
 }

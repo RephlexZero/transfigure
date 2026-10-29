@@ -15,8 +15,8 @@
       content="file converter, private file converter, offline file converter, heic to jpg, convert png to jpg, jpg to pdf, m4a to mp3, wav to mp3, flac to mp3, markdown to docx, docx to pdf, xlsx to csv, csv to excel, json to yaml, webassembly converter, no upload file converter, browser file converter"
     />
     <meta name="author" content="RephlexZero" />
-    <meta name="theme-color" content="#faf9f7" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0e0d0c" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#efebe3" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#16151a" media="(prefers-color-scheme: dark)" />
     <meta name="color-scheme" content="light dark" />
     <link rel="canonical" href="https://transfigure.ing" />
 
@@ -87,9 +87,9 @@
 
     <link
       rel="icon"
-      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d98014' stroke-width='2'><circle cx='12' cy='12' r='10'/><path d='M12 5.5 18 16.5 H6 Z' stroke-linejoin='round'/><line x1='9' y1='13' x2='15' y2='13'/></svg>"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'><circle cx='11.4' cy='12.6' r='10' stroke='%230078bf' stroke-width='2.2'/><path d='M12 5.5 18 16.5H6Z' fill='%23e8473c' stroke='%23e8473c' stroke-width='1.4' stroke-linejoin='round'/><path d='M9 13h6' stroke='%2318171c' stroke-width='1.8'/></svg>"
     />
-    <link rel="preload" href="/fonts/inter-var.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/bricolage-grotesque-latin.woff2" as="font" type="font/woff2" crossorigin />
     <link data-trunk rel="css" href="tailwind.css" />
     <link data-trunk rel="rust" data-wasm-opt="0" />
     <link data-trunk rel="copy-file" href="_headers" />
@@ -100,10 +100,19 @@
     <link data-trunk rel="copy-dir" href="fonts" />
   </head>
   <body>
-    <!-- Shown until the WASM app mounts (main.rs removes it). -->
+    <!-- Shown until the WASM app mounts (main.rs removes it): the mark, its
+         two inks drifting in and out of register. -->
     <div id="boot" aria-hidden="true" style="min-height:100vh;display:flex;align-items:center;justify-content:center">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#d98014" stroke-width="1.75" style="animation:boot 1.4s ease-in-out infinite"><circle cx="12" cy="12" r="10"/><path d="M12 5.5 18 16.5H6Z" stroke-linejoin="round"/><path d="M9 13h6"/></svg>
-      <style>@keyframes boot{50%{opacity:.35}}</style>
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" style="isolation:isolate">
+        <circle cx="12" cy="12" r="10" stroke="#0078bf" stroke-width="1.8" style="mix-blend-mode:multiply"/>
+        <path d="M12 5.5 18 16.5H6Z" fill="#e8473c" stroke="#e8473c" stroke-width="1.4" stroke-linejoin="round" style="mix-blend-mode:multiply;animation:boot 1.6s ease-in-out infinite"/>
+      </svg>
+      <style>
+        body{margin:0;background:#efebe3}
+        @media (prefers-color-scheme:dark){body{background:#16151a}#boot circle{stroke:#4aa8f0;mix-blend-mode:screen!important}#boot path{fill:#ff6b5e;stroke:#ff6b5e;mix-blend-mode:screen!important}}
+        @keyframes boot{0%,100%{transform:translate(1.2px,-0.9px);opacity:.35}50%{transform:none;opacity:1}}
+        @media (prefers-reduced-motion:reduce){#boot path{animation:none}}
+      </style>
     </div>
     <noscript>
       <style>#boot{display:none!important}</style>

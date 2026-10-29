@@ -34,7 +34,7 @@ pub fn format_elapsed(ms: u32) -> String {
     }
 }
 
-/// Broad file family, used to pick an icon and tint for a file.
+/// Broad file family.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Category {
     Image,
@@ -44,6 +44,33 @@ pub enum Category {
     Config,
     Encoding,
     Other,
+}
+
+impl Category {
+    /// Three-letter code for the format grid.
+    pub fn code(self) -> &'static str {
+        match self {
+            Category::Image => "IMG",
+            Category::Audio => "AUD",
+            Category::Document => "DOC",
+            Category::Data => "SHT",
+            Category::Config => "DAT",
+            Category::Encoding => "ENC",
+            Category::Other => "",
+        }
+    }
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Category::Image => "image",
+            Category::Audio => "audio",
+            Category::Document => "document",
+            Category::Data => "spreadsheet",
+            Category::Config => "data",
+            Category::Encoding => "base64",
+            Category::Other => "unknown type",
+        }
+    }
 }
 
 pub fn category_of(ext: &str) -> Category {
@@ -63,6 +90,52 @@ pub fn category_of(ext: &str) -> Category {
         "base64" | "bin" => Category::Encoding,
         _ => Category::Other,
     }
+}
+
+/// A format as the interface writes it: lowercase with its dot, `.jpg`.
+pub fn ext_label(ext: &str) -> String {
+    if ext.is_empty() {
+        ".?".to_string()
+    } else {
+        format!(".{}", ext.to_lowercase())
+    }
+}
+
+/// Shrink factor for the giant extension so long names (`.markdown`)
+/// still fit the column the short ones (`.jpg`) are sized for.
+pub fn ext_scale(label: &str) -> f32 {
+    match label.chars().count() {
+        0..=5 => 1.0,
+        6 => 0.86,
+        7 => 0.74,
+        8 => 0.65,
+        _ => 0.56,
+    }
+}
+
+/// Distinct input formats (aliases folded) and distinct output formats.
+pub fn format_counts() -> (usize, usize) {
+    let mut inputs: Vec<&str> = converter::ALL_INPUT_FORMATS
+        .iter()
+        .map(|e| converter::canonical(e))
+        .collect();
+    inputs.sort_unstable();
+    inputs.dedup();
+    let outputs = all_outputs();
+    (inputs.len(), outputs.len())
+}
+
+/// Every format the converter can write, excluding the raw `bin` that
+/// decoding Base64 produces.
+pub fn all_outputs() -> Vec<&'static str> {
+    let mut out: Vec<&'static str> = converter::ALL_INPUT_FORMATS
+        .iter()
+        .flat_map(|e| converter::get_output_formats(e))
+        .filter(|f| *f != "bin")
+        .collect();
+    out.sort_unstable();
+    out.dedup();
+    out
 }
 
 pub fn mime_type_for(ext: &str) -> &'static str {
@@ -252,6 +325,39 @@ mod tests {
         assert_eq!(category_of("xlsx"), Category::Data);
         assert_eq!(category_of("base64"), Category::Encoding);
         assert_eq!(category_of(""), Category::Other);
+    }
+
+    #[test]
+    fn category_codes() {
+        assert_eq!(Category::Image.code(), "IMG");
+        assert_eq!(Category::Config.name(), "data");
+    }
+
+    // ── ext_label / ext_scale ───────────────────────
+
+    #[test]
+    fn ext_labels() {
+        assert_eq!(ext_label("JPG"), ".jpg");
+        assert_eq!(ext_label(""), ".?");
+    }
+
+    #[test]
+    fn ext_scale_shrinks_long_names() {
+        assert_eq!(ext_scale(".jpg"), 1.0);
+        assert_eq!(ext_scale(".heic"), 1.0);
+        assert!(ext_scale(".markdown") < ext_scale(".base64"));
+    }
+
+    // ── format_counts ───────────────────────────────
+
+    #[test]
+    fn format_counts_fold_aliases() {
+        let (inputs, outputs) = format_counts();
+        // jpeg/jfif/jpg are one format; bin is not offered as an output.
+        assert!(inputs < converter::ALL_INPUT_FORMATS.len());
+        assert!(!all_outputs().contains(&"bin"));
+        assert!(all_outputs().contains(&"avif"));
+        assert!(outputs > 20);
     }
 
     // ── mime_type_for ───────────────────────────────

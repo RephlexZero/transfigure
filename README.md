@@ -39,7 +39,7 @@ Batch conversion is supported — drop multiple files at once and convert them a
 | Layer      | Technology                                                   |
 |------------|--------------------------------------------------------------|
 | UI         | [Leptos](https://leptos.dev/) (Rust → WASM, CSR)            |
-| Styling    | [Tailwind CSS v3](https://tailwindcss.com/), self-hosted Inter + JetBrains Mono |
+| Styling    | [Tailwind CSS v3](https://tailwindcss.com/), self-hosted Bricolage Grotesque + JetBrains Mono |
 | Build      | [Trunk](https://trunkrs.dev/)                                |
 | Conversion | Pure Rust compiled to WebAssembly via `wasm-bindgen`         |
 | Images     | [`image`](https://github.com/image-rs/image), [`heic`](https://github.com/imazen/heic) (HEIC), [`resvg`](https://github.com/linebender/resvg) (SVG), [`bcdec_rs`](https://crates.io/crates/bcdec_rs) (DDS) |
@@ -55,8 +55,9 @@ Batch conversion is supported — drop multiple files at once and convert them a
 transfigure/
 ├── crates/
 │   ├── app/                # Leptos frontend (compiled to WASM)
-│   │   ├── src/components/ # UI components (header, hero, converter, info, icons)
+│   │   ├── src/components/ # UI components (header, converter, specimen, queue, info, icons)
 │   │   ├── fonts/          # Self-hosted variable fonts (OFL)
+│   │   ├── src/state.rs    # The file batch: queue, conversion run, saving
 │   │   ├── src/utils.rs    # Download/format helpers
 │   │   └── index.html      # Entry point for Trunk
 │   └── converter/      # Conversion engine (no WASM dependencies)

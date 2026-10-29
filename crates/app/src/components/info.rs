@@ -1,21 +1,81 @@
 use leptos::prelude::*;
 
-use super::icons::{CategoryTile, GithubMark, Ic, Icon, Logo};
-use crate::utils::Category;
+use super::icons::{GithubMark, Logo};
+use crate::state::Batch;
+use crate::utils::{all_outputs, category_of, format_counts};
 
+/// Every input format, one per cell, grouped by family.
+const GRID: [&str; 39] = [
+    "heic", "jpg", "png", "webp", "gif", "bmp", "tiff", "ico", "svg", "qoi", "tga", "dds", "hdr",
+    "exr", "mp3", "m4a", "aac", "wav", "flac", "ogg", "aiff", "caf", "docx", "odt", "rtf", "pdf",
+    "md", "html", "txt", "xlsx", "xls", "ods", "csv", "tsv", "json", "yaml", "toml", "xml",
+    "base64",
+];
+
+// ── Format grid ─────────────────────────────────────
+
+/// All the formats it reads, set like a type specimen's character set.
+/// Formats in the current queue are filled in source ink.
 #[component]
-fn SectionHeading(
-    id: &'static str,
-    eyebrow: &'static str,
-    title: &'static str,
-    #[prop(optional)] lede: Option<&'static str>,
-) -> impl IntoView {
+pub fn FormatGrid() -> impl IntoView {
+    let batch = expect_context::<Batch>();
+    let outputs = all_outputs();
+    let (inputs, output_count) = format_counts();
+
     view! {
-        <div class="max-w-2xl">
-            <p class="eyebrow">{eyebrow}</p>
-            <h2 id=id class="section-title mt-2 text-balance">{title}</h2>
-            {lede.map(|t| view! { <p class="mt-3 text-muted leading-relaxed text-pretty">{t}</p> })}
-        </div>
+        <section aria-labelledby="grid-title" class="pt-2">
+            <div class="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 min-h-10">
+                <h2 id="grid-title" class="font-mono text-xs font-semibold">
+                    {format!("Every format it reads · {inputs} in, {output_count} out")}
+                </h2>
+                <p class="flex items-center gap-5 label">
+                    <span class="flex items-center gap-2">
+                        <span class="size-[7px] rounded-full bg-res" aria-hidden="true"></span>
+                        "also an output"
+                    </span>
+                    <span class="flex items-center gap-2">
+                        <span class="size-2.5 bg-src" aria-hidden="true"></span>
+                        "in your queue"
+                    </span>
+                </p>
+            </div>
+            <ul class="grid grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))] border-t border-l border-rule">
+                {GRID
+                    .iter()
+                    .map(|&ext| {
+                        let is_out = outputs.contains(&ext);
+                        let queued = Memo::new(move |_| batch.has_ext(ext));
+                        let cell = move || {
+                            let tone = if queued.get() { "bg-src text-on-src" } else { "" };
+                            format!(
+                                "relative flex items-center justify-center h-[4.75rem] border-r border-b border-rule transition-colors duration-300 {tone}"
+                            )
+                        };
+                        let code = move || {
+                            let tone = if queued.get() { "text-on-src" } else { "text-ink-2" };
+                            format!("absolute top-1.5 left-2 font-mono text-[10px] {tone}")
+                        };
+                        let dot = move || {
+                            let tone = if queued.get() { "bg-on-src" } else { "bg-res" };
+                            format!("absolute top-2.5 right-2.5 size-[7px] rounded-full {tone}")
+                        };
+                        let note = move || {
+                            let out = if is_out { ", also an output" } else { "" };
+                            let mine = if queued.get() { ", in your queue" } else { "" };
+                            format!("{out}{mine}")
+                        };
+                        view! {
+                            <li class=cell>
+                                <span class=code aria-hidden="true">{category_of(ext).code()}</span>
+                                {is_out.then(|| view! { <span class=dot aria-hidden="true"></span> })}
+                                <span class="text-[22px] font-semibold tracking-[-0.02em]">{ext}</span>
+                                <span class="sr-only">{note}</span>
+                            </li>
+                        }
+                    })
+                    .collect::<Vec<_>>()}
+            </ul>
+        </section>
     }
 }
 
@@ -24,287 +84,206 @@ fn SectionHeading(
 #[component]
 pub fn HowItWorks() -> impl IntoView {
     view! {
-        <section id="how" class="border-t border-line bg-surface/50" aria-labelledby="how-title">
-            <div class="mx-auto max-w-5xl px-4 sm:px-6 py-16 sm:py-24">
-                <SectionHeading
-                    id="how-title"
-                    eyebrow="How it works"
-                    title="Your files never leave this tab."
-                    lede="Transfigure has no backend. The page ships a conversion engine written in Rust and compiled to WebAssembly, and it runs on your own CPU. Privacy comes from how the app is built, not from a policy you have to trust."
-                />
-
-                <FlowDiagram/>
-
-                <ol class="mt-12 grid gap-8 sm:grid-cols-3">
-                    <Step
-                        n="1"
-                        title="Add files"
-                        text="Drop, choose or paste files. They are read into this tab's memory and go nowhere else."
-                    />
-                    <Step
-                        n="2"
-                        title="Convert"
-                        text="The engine decodes and re-encodes each file locally, one after another, with no server round trips."
-                    />
-                    <Step
-                        n="3"
-                        title="Save"
-                        text="Download files one at a time, or save the whole batch as a ZIP, TAR.GZ, TAR.XZ or 7Z archive."
-                    />
-                </ol>
-
-                <div class="mt-12 flex gap-3 rounded-xl border border-line bg-surface p-4 sm:p-5 text-sm">
-                    <Icon icon=Ic::Monitor class="size-5 shrink-0 text-accent-strong mt-px"/>
-                    <p class="text-muted leading-relaxed">
-                        <span class="font-medium text-fg">"Check it yourself. "</span>
-                        "Open your browser's developer tools, switch to the Network tab and convert "
-                        "something. No requests are made while files convert."
-                    </p>
-                </div>
+        <section id="how" aria-labelledby="how-title" class="mt-24 sm:mt-32 border-t-2 border-ink pt-7">
+            <div class="flex flex-wrap items-end justify-between gap-6">
+                <h2 id="how-title" class="section-title flex-[999_1_32rem]">
+                    "Converted in your browser. "
+                    <span class="text-res">"Uploaded nowhere."</span>
+                </h2>
+                <p class="flex-[1_1_18rem] max-w-md text-lg leading-relaxed text-ink-2 text-pretty">
+                    "Transfigure has no backend. The page ships a conversion engine written in Rust "
+                    "and compiled to WebAssembly, and it runs on your own CPU. Privacy comes from how "
+                    "it’s built, not from a policy you have to trust."
+                </p>
             </div>
+
+            <ol class="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="How a file is converted">
+                <li class="flex flex-col justify-between gap-6 min-h-[12.5rem] p-5 rounded border-[1.5px] border-ink">
+                    <span class="label">"01 · your file"</span>
+                    <div>
+                        <p class="text-[28px] font-bold leading-tight tracking-[-0.03em]">
+                            "holiday"<span class="text-src">".png"</span>
+                        </p>
+                        <p class="mt-1 text-sm text-ink-2">"Read into this tab’s memory and nowhere else."</p>
+                    </div>
+                </li>
+                <li class="flex flex-col justify-between gap-6 min-h-[12.5rem] p-5 rounded halftone">
+                    <span class="self-start rounded bg-paper px-1.5 py-0.5 label">"02 · the engine, in this tab"</span>
+                    <div class="self-start rounded bg-paper px-2 py-1.5">
+                        <p class="text-[22px] font-bold leading-tight tracking-[-0.02em]">"Rust → WebAssembly"</p>
+                        <p class="mt-1 text-sm text-ink-2">"Decodes and re-encodes on your CPU."</p>
+                    </div>
+                </li>
+                <li class="flex flex-col justify-between gap-6 min-h-[12.5rem] p-5 rounded bg-res text-on-res">
+                    <span class="font-mono text-xs">"03 · the result"</span>
+                    <div>
+                        <p class="text-[28px] font-bold leading-tight tracking-[-0.03em]">"holiday.webp"</p>
+                        <p class="mt-1 text-sm">"Saved straight to your device."</p>
+                    </div>
+                </li>
+                <li class="flex flex-col justify-between gap-6 min-h-[12.5rem] p-5 rounded border-[1.5px] border-dashed border-rule text-ink-2">
+                    <span class="label">"04 · upload server"</span>
+                    <div>
+                        <p class="text-[28px] font-bold leading-tight tracking-[-0.03em] line-through decoration-res decoration-[3px]">
+                            "none"
+                        </p>
+                        <p class="mt-1 text-sm">"There isn’t one to send files to."</p>
+                    </div>
+                </li>
+            </ol>
+
+            <p class="mt-5 label text-pretty">
+                "Check it yourself: open your browser’s developer tools, watch the Network tab and "
+                "convert something. No requests are made while files convert."
+            </p>
         </section>
     }
 }
 
-/// File → engine → file, drawn inside a "your device" boundary, with the
-/// server that isn't there shown outside it.
-#[component]
-fn FlowDiagram() -> impl IntoView {
-    view! {
-        <figure class="mt-10 sm:mt-12" aria-label="Diagram: a file is converted by the engine inside your browser; no server is involved">
-            <div class="flex flex-col lg:flex-row lg:items-stretch gap-4">
-                <div class="relative flex-1 rounded-2xl border border-dashed border-line-strong p-5 pt-8 sm:p-6 sm:pt-9">
-                    <span class="absolute -top-3 left-4 inline-flex items-center gap-1.5 rounded-full border border-line bg-page px-2.5 py-0.5 text-xs font-medium text-muted">
-                        <Icon icon=Ic::Monitor class="size-3.5"/>
-                        "Your device"
-                    </span>
-                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                        <FlowNode tile=Category::Image title="holiday.png" meta="4.2 MB"/>
-                        <FlowArrow/>
-                        <div class="flex-[1.2] flex items-center gap-3 rounded-xl border border-accent/40 bg-accent/[0.06] px-4 py-3.5">
-                            <span class="size-9 shrink-0 inline-flex items-center justify-center rounded-lg bg-accent/15 text-accent-strong">
-                                <Icon icon=Ic::Cpu class="size-[18px]"/>
-                            </span>
-                            <div class="min-w-0">
-                                <p class="text-sm font-medium">"Transfigure engine"</p>
-                                <p class="text-xs text-muted">"WebAssembly, in this tab"</p>
-                            </div>
-                        </div>
-                        <FlowArrow/>
-                        <FlowNode tile=Category::Image title="holiday.webp" meta="610 KB"/>
-                    </div>
-                </div>
+// ── Formats index ───────────────────────────────────
 
-                <div class="lg:w-52 flex lg:flex-col items-center justify-center gap-3 rounded-2xl border border-line bg-sunken/60 px-5 py-4 text-center">
-                    <span class="relative size-9 inline-flex items-center justify-center rounded-lg bg-fg/[0.05] text-subtle">
-                        <Icon icon=Ic::Server class="size-[18px]"/>
-                        <span class="absolute h-[1.5px] w-11 rotate-45 bg-bad/70 rounded-full"></span>
-                    </span>
-                    <div class="text-left lg:text-center">
-                        <p class="text-sm font-medium text-muted">"Remote server"</p>
-                        <p class="text-xs text-subtle">"Not involved"</p>
-                    </div>
-                </div>
-            </div>
-        </figure>
-    }
+struct Family {
+    name: &'static str,
+    note: &'static str,
+    reads: &'static str,
+    writes: &'static str,
 }
 
-#[component]
-fn FlowNode(tile: Category, title: &'static str, meta: &'static str) -> impl IntoView {
-    view! {
-        <div class="flex-1 min-w-0 flex items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3.5 shadow-sm">
-            <CategoryTile cat=tile/>
-            <div class="min-w-0">
-                <p class="font-mono text-[13px] font-medium truncate">{title}</p>
-                <p class="text-xs text-subtle tabular-nums">{meta}</p>
-            </div>
-        </div>
-    }
-}
-
-#[component]
-fn FlowArrow() -> impl IntoView {
-    view! {
-        <span class="flex justify-center text-subtle shrink-0" aria-hidden="true">
-            <Icon icon=Ic::ArrowRight class="size-4 hidden sm:block"/>
-            <Icon icon=Ic::ArrowDown class="size-4 sm:hidden"/>
-        </span>
-    }
-}
-
-#[component]
-fn Step(n: &'static str, title: &'static str, text: &'static str) -> impl IntoView {
-    view! {
-        <li>
-            <span class="inline-flex size-7 items-center justify-center rounded-full border border-line-strong bg-surface text-[13px] font-semibold tabular-nums">
-                {n}
-            </span>
-            <h3 class="mt-4 font-semibold">{title}</h3>
-            <p class="mt-1.5 text-sm text-muted leading-relaxed">{text}</p>
-        </li>
-    }
-}
-
-// ── Formats ─────────────────────────────────────────
+const FAMILIES: [Family; 6] = [
+    Family {
+        name: "Images",
+        note: "iPhone HEIC photos, SVG, AVIF output, and any image to PDF. Photos stay the right way up.",
+        reads: "heic jpg png webp gif bmp tiff ico svg qoi tga dds hdr exr",
+        writes: "jpg png webp avif pdf gif bmp tiff ico qoi tga",
+    },
+    Family {
+        name: "Audio",
+        note: "Including Apple M4A (AAC and ALAC). Lossless sources keep their bit depth.",
+        reads: "mp3 m4a aac wav flac ogg aiff caf",
+        writes: "mp3 wav flac",
+    },
+    Family {
+        name: "Documents",
+        note: "Headings, lists, links and tables survive. PDFs are read by extracting their text.",
+        reads: "docx odt rtf pdf md html txt",
+        writes: "pdf docx html md txt",
+    },
+    Family {
+        name: "Spreadsheets",
+        note: "Column order and leading zeros survive; semicolon CSVs are detected.",
+        reads: "xlsx xls ods csv tsv json",
+        writes: "xlsx csv json tsv",
+    },
+    Family {
+        name: "Data",
+        note: "Configuration and data files, nested structures included.",
+        reads: "json yaml toml xml",
+        writes: "json yaml toml xml",
+    },
+    Family {
+        name: "Encoding",
+        note: "Wrap any file as Base64 text, or unwrap it again.",
+        reads: "any file, base64",
+        writes: "base64, the original file",
+    },
+];
 
 #[component]
 pub fn Formats() -> impl IntoView {
     view! {
-        <section id="formats" class="border-t border-line" aria-labelledby="formats-title">
-            <div class="mx-auto max-w-5xl px-4 sm:px-6 py-16 sm:py-24">
-                <SectionHeading
-                    id="formats-title"
-                    eyebrow="Formats"
-                    title="What it converts"
-                    lede="Drop any of these in and pick an output. Mixed batches are fine: each file gets its own target."
-                />
-
-                <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    <FormatCard
-                        cat=Category::Image
-                        title="Images"
-                        text="Open iPhone HEIC photos, convert between raster formats, encode AVIF, rasterise SVG, and turn any image into a PDF. Photo orientation is kept."
-                        from=&["HEIC", "JPG", "PNG", "WebP", "GIF", "BMP", "TIFF", "ICO", "SVG", "QOI", "TGA", "DDS", "HDR", "EXR"]
-                        to=&["JPG", "PNG", "WebP", "AVIF", "PDF", "GIF", "BMP", "TIFF", "ICO", "QOI", "TGA"]
-                    />
-                    <FormatCard
-                        cat=Category::Audio
-                        title="Audio"
-                        text="Convert songs and recordings between MP3, WAV and FLAC, including Apple M4A (AAC and ALAC). Lossless sources keep their bit depth."
-                        from=&["MP3", "M4A", "AAC", "WAV", "FLAC", "OGG", "AIFF", "CAF"]
-                        to=&["MP3", "WAV", "FLAC"]
-                    />
-                    <FormatCard
-                        cat=Category::Document
-                        title="Documents"
-                        text="Word, OpenDocument, RTF, Markdown and HTML with headings, lists, links and tables intact. PDFs are converted by extracting their text."
-                        from=&["DOCX", "ODT", "RTF", "PDF", "MD", "HTML", "TXT"]
-                        to=&["PDF", "DOCX", "HTML", "MD", "TXT"]
-                    />
-                    <FormatCard
-                        cat=Category::Data
-                        title="Spreadsheets"
-                        text="Excel and OpenDocument sheets to CSV or JSON, and back to XLSX. Column order and leading zeros survive; semicolon CSVs are detected."
-                        from=&["XLSX", "XLS", "ODS", "CSV", "TSV", "JSON"]
-                        to=&["XLSX", "CSV", "JSON", "TSV"]
-                    />
-                    <FormatCard
-                        cat=Category::Config
-                        title="Structured data"
-                        text="Translate configuration and data files between JSON, YAML, TOML and XML, nested structures included."
-                        from=&["JSON", "YAML", "TOML", "XML"]
-                        to=&["JSON", "YAML", "TOML", "XML"]
-                    />
-                    <FormatCard
-                        cat=Category::Encoding
-                        title="Encoding"
-                        text="Encode any file as Base64 text, or decode Base64 back to the original file."
-                        from=&["Any file", "Base64"]
-                        to=&["Base64", "Original file"]
-                    />
+        <section id="formats" aria-labelledby="formats-title" class="mt-24 sm:mt-32 border-t-2 border-ink pt-7">
+            <div class="flex flex-wrap items-end justify-between gap-4">
+                <h2 id="formats-title" class="section-title">"Formats"</h2>
+                <p class="label">"mixed batches are fine · save them as .zip .tar.gz .tar.xz .7z"</p>
+            </div>
+            <div class="mt-8 border-t border-ink md:border-t-0">
+                <div class="hidden md:grid grid-cols-[38%_minmax(0,1fr)_minmax(0,1fr)] gap-6 py-2 border-b border-ink label" aria-hidden="true">
+                    <span>"Family"</span>
+                    <span>"Reads"</span>
+                    <span>"Writes"</span>
                 </div>
-
-                <p class="mt-6 text-sm text-subtle">
-                    "Converted batches can be saved as ZIP, TAR.GZ, TAR.XZ or 7Z archives."
-                </p>
+                <ul>
+                    {FAMILIES
+                        .iter()
+                        .map(|f| view! {
+                            <li class="grid md:grid-cols-[38%_minmax(0,1fr)_minmax(0,1fr)] gap-x-6 gap-y-2 py-5 border-b border-rule">
+                                <div class="mb-1 md:mb-0">
+                                    <h3 class="text-[32px] font-bold leading-none tracking-[-0.035em]">{f.name}</h3>
+                                    <p class="mt-2 max-w-sm text-sm leading-relaxed text-ink-2 text-pretty">{f.note}</p>
+                                </div>
+                                <p class="font-mono text-[13px] leading-relaxed text-src-ink">
+                                    <span class="md:sr-only inline-block w-16 text-ink-2">"reads"</span>
+                                    {f.reads}
+                                </p>
+                                <p class="font-mono text-[13px] font-semibold leading-relaxed text-res-ink">
+                                    <span class="md:sr-only inline-block w-16 font-normal text-ink-2">"writes"</span>
+                                    {f.writes}
+                                </p>
+                            </li>
+                        })
+                        .collect::<Vec<_>>()}
+                </ul>
             </div>
         </section>
     }
 }
 
-#[component]
-fn FormatCard(
-    cat: Category,
-    title: &'static str,
-    text: &'static str,
-    from: &'static [&'static str],
-    to: &'static [&'static str],
-) -> impl IntoView {
-    let chips = |list: &'static [&'static str]| {
-        list.iter()
-            .map(|f| view! { <li class="fmt normal-case">{*f}</li> })
-            .collect::<Vec<_>>()
-    };
-    view! {
-        <article class="rounded-2xl border border-line bg-surface p-5 flex flex-col">
-            <div class="flex items-center gap-3">
-                <CategoryTile cat=cat/>
-                <h3 class="font-semibold">{title}</h3>
-            </div>
-            <p class="mt-3 text-sm text-muted leading-relaxed">{text}</p>
-            <dl class="mt-4 pt-4 border-t border-line space-y-3 text-xs">
-                <div class="grid grid-cols-[2.25rem_minmax(0,1fr)] gap-2 items-start">
-                    <dt class="text-subtle pt-1">"From"</dt>
-                    <dd><ul class="flex flex-wrap gap-1">{chips(from)}</ul></dd>
-                </div>
-                <div class="grid grid-cols-[2.25rem_minmax(0,1fr)] gap-2 items-start">
-                    <dt class="text-subtle pt-1">"To"</dt>
-                    <dd><ul class="flex flex-wrap gap-1">{chips(to)}</ul></dd>
-                </div>
-            </dl>
-        </article>
-    }
-}
+// ── Questions ───────────────────────────────────────
 
-// ── FAQ ─────────────────────────────────────────────
+const QUESTIONS: [(&str, &str); 7] = [
+    (
+        "Are my files really never uploaded?",
+        "Yes. Transfigure is a set of static files with no server-side code. Conversion runs in your browser, so there is nowhere for a file to be sent.",
+    ),
+    (
+        "Does it work offline?",
+        "Once the page has loaded, converting needs no network connection. You can disconnect and keep working.",
+    ),
+    (
+        "Is there a file size limit?",
+        "No fixed limit. Files are held in your browser’s memory while they convert, so the ceiling is your device’s memory.",
+    ),
+    (
+        "What happens when I close the tab?",
+        "Your files are gone. Nothing is written to storage or kept between visits.",
+    ),
+    (
+        "Can it convert iPhone photos?",
+        "Yes. HEIC and HEIF photos convert to JPG, PNG, WebP or PDF, the right way up. Drop a whole camera-roll export at once.",
+    ),
+    (
+        "What can’t it do?",
+        "Video isn’t supported. PDFs are converted by extracting their text, so layout and pictures aren’t kept, and scanned pages have no text to extract.",
+    ),
+    (
+        "Is it free?",
+        "Yes. No accounts, usage caps or paid tiers. The source is available under the AGPL-3.0 licence.",
+    ),
+];
 
 #[component]
 pub fn Faq() -> impl IntoView {
     view! {
-        <section id="faq" class="border-t border-line bg-surface/50" aria-labelledby="faq-title">
-            <div class="mx-auto max-w-5xl px-4 sm:px-6 py-16 sm:py-24 grid gap-10 lg:grid-cols-[18rem_minmax(0,1fr)]">
-                <SectionHeading id="faq-title" eyebrow="FAQ" title="Questions"/>
-
-                <div class="divide-y divide-line border-y border-line">
-                    <FaqItem q="Are my files really never uploaded?">
-                        "Yes. Transfigure is a set of static files with no server-side code. "
-                        "Conversion runs in your browser, so there is nowhere for a file to be "
-                        "sent. The Network tab in your browser's developer tools will confirm it."
-                    </FaqItem>
-                    <FaqItem q="Does it work offline?">
-                        "Once the page has loaded, converting needs no network connection. You "
-                        "can disconnect and keep working."
-                    </FaqItem>
-                    <FaqItem q="Is there a file size limit?">
-                        "There is no fixed limit. Files are held in your browser's memory while "
-                        "they convert, so the practical ceiling is your device's available memory."
-                    </FaqItem>
-                    <FaqItem q="What happens to my files when I close the tab?">
-                        "They're gone. Nothing is written to storage or kept between visits."
-                    </FaqItem>
-                    <FaqItem q="Can it convert iPhone photos?">
-                        "Yes. HEIC and HEIF photos convert to JPG, PNG, WebP or PDF, the right "
-                        "way up. Drop a whole camera-roll export at once."
-                    </FaqItem>
-                    <FaqItem q="What can't it do?">
-                        "Video isn't supported. PDFs are converted by extracting their text, so "
-                        "page layout and pictures aren't kept, and scanned pages have no text to "
-                        "extract. PDF output uses built-in fonts that cover Western European "
-                        "languages."
-                    </FaqItem>
-                    <FaqItem q="Is it free?">
-                        "Yes. There are no accounts, usage caps or paid tiers. The source is "
-                        "available under the AGPL-3.0 licence."
-                    </FaqItem>
-                </div>
-            </div>
+        <section id="faq" aria-labelledby="faq-title" class="mt-24 sm:mt-32 border-t-2 border-ink pt-7">
+            <h2 id="faq-title" class="section-title">"Questions"</h2>
+            <ol class="mt-10 grid gap-x-12 gap-y-8 md:grid-cols-2 xl:grid-cols-3">
+                {QUESTIONS
+                    .iter()
+                    .enumerate()
+                    .map(|(i, (q, a))| view! {
+                        <li class="grid grid-cols-[2.25rem_minmax(0,1fr)]">
+                            <span class="pt-1 font-mono text-[13px] font-semibold text-res-ink tabular-nums" aria-hidden="true">
+                                {format!("{:02}", i + 1)}
+                            </span>
+                            <div>
+                                <h3 class="text-xl font-bold leading-snug tracking-[-0.015em] text-balance">{*q}</h3>
+                                <p class="mt-1.5 leading-relaxed text-ink-2 text-pretty">{*a}</p>
+                            </div>
+                        </li>
+                    })
+                    .collect::<Vec<_>>()}
+            </ol>
         </section>
-    }
-}
-
-#[component]
-fn FaqItem(q: &'static str, children: Children) -> impl IntoView {
-    view! {
-        <details class="group py-1">
-            <summary class="flex cursor-pointer list-none items-center justify-between gap-4 py-4 font-medium [&::-webkit-details-marker]:hidden rounded-md">
-                {q}
-                <span class="shrink-0 text-subtle transition-transform duration-200 group-open:rotate-45">
-                    <Icon icon=Ic::Plus class="size-4"/>
-                </span>
-            </summary>
-            <p class="pb-5 -mt-1 pr-8 text-muted leading-relaxed text-pretty">{children()}</p>
-        </details>
     }
 }
 
@@ -313,37 +292,37 @@ fn FaqItem(q: &'static str, children: Children) -> impl IntoView {
 #[component]
 pub fn SupportBanner() -> impl IntoView {
     view! {
-        <section class="border-t border-line" aria-label="Support the project">
-            <div class="mx-auto max-w-5xl px-4 sm:px-6 py-16 sm:py-20">
-                <div class="card flex flex-col md:flex-row md:items-center gap-6 p-6 sm:p-8">
-                    <div class="flex-1">
-                        <h2 class="text-lg font-semibold tracking-tight">"Free, with nothing to sell you."</h2>
-                        <p class="mt-1.5 text-sm text-muted leading-relaxed max-w-lg">
-                            "Transfigure is open source and has no ads or tracking. If it saved you "
-                            "some time, you can help keep it going."
-                        </p>
-                    </div>
-                    <div class="flex flex-wrap gap-2.5">
-                        <a
-                            href="https://ko-fi.com/rephlexzero"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="btn btn-primary"
-                        >
-                            <Icon icon=Ic::Heart class="size-4"/>
-                            "Support on Ko-fi"
-                        </a>
-                        <a
-                            href="https://github.com/sponsors/RephlexZero"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="btn btn-secondary"
-                        >
-                            <GithubMark class="size-4"/>
-                            "GitHub Sponsors"
-                        </a>
-                    </div>
-                </div>
+        <section
+            aria-label="Support the project"
+            class="mt-24 sm:mt-32 py-10 border-y-2 border-ink flex flex-wrap items-center justify-between gap-6"
+        >
+            <div>
+                <p class="text-[clamp(2.25rem,4.4vw,3.75rem)] font-extrabold leading-[0.98] tracking-[-0.04em]">
+                    "Free, with nothing to sell you."
+                </p>
+                <p class="mt-3 max-w-xl text-ink-2 text-pretty">
+                    "Transfigure is open source with no ads or tracking. If it saved you some time, "
+                    "you can help keep it going."
+                </p>
+            </div>
+            <div class="flex flex-wrap gap-3">
+                <a
+                    href="https://ko-fi.com/rephlexzero"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="btn btn-res btn-lg"
+                >
+                    "Support on Ko-fi"
+                </a>
+                <a
+                    href="https://github.com/sponsors/RephlexZero"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="btn btn-line btn-lg"
+                >
+                    <GithubMark class="size-[18px]"/>
+                    "GitHub Sponsors"
+                </a>
             </div>
         </section>
     }
@@ -354,21 +333,18 @@ pub fn SupportBanner() -> impl IntoView {
 #[component]
 pub fn Footer() -> impl IntoView {
     view! {
-        <footer class="border-t border-line">
-            <div class="mx-auto max-w-6xl px-4 sm:px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-subtle">
-                <div class="flex items-center gap-2.5">
-                    <Logo class="size-[18px] text-accent"/>
-                    <span class="font-medium text-muted">"Transfigure"</span>
-                    <span aria-hidden="true">"·"</span>
-                    <span>"Built with Rust and WebAssembly"</span>
-                </div>
-                <nav class="flex items-center gap-5" aria-label="Footer">
-                    <a href="https://github.com/RephlexZero/transfigure" target="_blank" rel="noopener noreferrer" class="hover:text-fg transition-colors">"Source"</a>
-                    <a href="https://ko-fi.com/rephlexzero" target="_blank" rel="noopener noreferrer" class="hover:text-fg transition-colors">"Ko-fi"</a>
-                    <a href="https://github.com/sponsors/RephlexZero" target="_blank" rel="noopener noreferrer" class="hover:text-fg transition-colors">"Sponsors"</a>
-                    <span>"AGPL-3.0"</span>
-                </nav>
-            </div>
+        <footer class="py-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 label">
+            <p class="flex items-center gap-2.5">
+                <Logo class="size-5"/>
+                <span class="text-ink font-semibold">"Transfigure"</span>
+                <span aria-hidden="true">"·"</span>
+                <span>"Rust + WebAssembly · AGPL-3.0"</span>
+            </p>
+            <nav class="flex items-center gap-5" aria-label="Footer">
+                <a href="https://github.com/RephlexZero/transfigure" target="_blank" rel="noopener noreferrer" class="hover:text-ink transition-colors">"source"</a>
+                <a href="https://ko-fi.com/rephlexzero" target="_blank" rel="noopener noreferrer" class="hover:text-ink transition-colors">"ko-fi"</a>
+                <a href="https://github.com/sponsors/RephlexZero" target="_blank" rel="noopener noreferrer" class="hover:text-ink transition-colors">"sponsors"</a>
+            </nav>
         </footer>
     }
 }

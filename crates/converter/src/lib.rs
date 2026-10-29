@@ -31,7 +31,7 @@ pub struct ConvertConfig {
 }
 
 /// Map extension aliases onto one name per format.
-fn canonical(ext: &str) -> &str {
+pub fn canonical(ext: &str) -> &str {
     match ext {
         "jpeg" | "jfif" | "jpe" => "jpg",
         "tif" => "tiff",
